@@ -6,6 +6,7 @@ langchain-core
 python-dotenv
 resend
 fastapi
+groq
 uvicorn
 apscheduler
 pydantic[email]
