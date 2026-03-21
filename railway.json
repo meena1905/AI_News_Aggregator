@@ -1,9 +1,21 @@
 {
+  "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "uvicorn api.main:app --host 0.0.0.0 --port 8080",
-    "restartPolicyType": "ON_FAILURE"
+    "runtime": "V2",
+    "numReplicas": 1,
+    "startCommand": "uvicorn api.main:app --host 0.0.0.0 --port $PORT",
+    "sleepApplication": false,
+    "useLegacyStacker": false,
+    "ipv6EgressEnabled": false,
+    "multiRegionConfig": {
+      "us-east4-eqdc4a": {
+        "numReplicas": 1
+      }
+    },
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
   }
 }
