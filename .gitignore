@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+scraped_articles.json
+node_modules/
+.next/
+*.egg-info/
+venv/
+.venv/
+notebooks/.ipynb_checkpoints/
