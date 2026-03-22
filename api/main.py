@@ -80,7 +80,7 @@ Only return JSON. No other text."""
 
 # ─── Personalizer ────────────────────────────────────────
 async def run_personalizer(articles):
-    conn  = await asyncpg.connect(DATABASE_URL)
+    conn = await asyncpg.connect(DATABASE_URL, ssl="require")
     users = await conn.fetch("SELECT * FROM users")
     await conn.close()
     personalized = {}
