@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 
 load_dotenv(override=True)
 
-DATABASE_URL   = "postgresql://postgres:postgres@localhost:5432/ainews"
+DATABASE_URL = os.getenv("DATABASE_URL")
 GROQ_API_KEY   = os.getenv("GROQ_API_KEY")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 RESEND_FROM    = "onboarding@resend.dev"
