@@ -127,4 +127,3 @@ MIT License — feel free to fork and customize!
 
 ---
 
-Built with ❤️ using LangGraph + Llama3.1 + Groq
