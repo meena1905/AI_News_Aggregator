@@ -118,7 +118,9 @@ playwright install chromium --with-deps
 cp .env.example .env  # add your keys
 python run_pipeline.py
 ```
-[MIT](LICENSE) — Developed by [Meenakshi S](https://github.com/meena1905)
+## License
+
+[MIT](LICENSE) — Developed by [Meenakshi](https://github.com/meena1905)
 
 ---
 
