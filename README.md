@@ -123,7 +123,7 @@ python run_pipeline.py
 
 ## 📄 License
 
-MIT License -Developed by Meenakshi
+MIT License -Developed by Meenakshi[https://github.com/meena1905]
 
 ---
 
