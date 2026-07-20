@@ -99,7 +99,7 @@ To test manually: **Actions → Daily AI News Digest → Run workflow**
 
 ---
 
-## 📧 Sample Email
+## Sample Email
 
 The digest includes for each article:
 -  Title + direct link
@@ -121,9 +121,6 @@ python run_pipeline.py
 ## License
 
 [MIT](LICENSE) — Developed by [Meenakshi](https://github.com/meena1905)
-
----
-
 
 ---
 
