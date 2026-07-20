@@ -1,10 +1,10 @@
-# ⚡ AI News Aggregator
+#  AI News Aggregator
 
 > A fully automated AI-powered news digest that scrapes, summarizes, and delivers personalized tech news to your inbox every morning at 7AM IST — no servers, no cost, no effort.
 
 ---
 
-## 🚀 What It Does
+##  What It Does
 
 Every day at **7:00 AM IST**, this pipeline automatically:
 
@@ -13,11 +13,11 @@ Every day at **7:00 AM IST**, this pipeline automatically:
 3. **Personalizes** the digest based on your interests
 4. **Emails** a beautiful HTML digest straight to your inbox
 
-Zero manual effort after setup. 💯
+Zero manual effort after setup. 
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Tool |
 |-------|------|
@@ -31,7 +31,7 @@ Zero manual effort after setup. 💯
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 AI_News_Aggregator/
@@ -51,7 +51,7 @@ AI_News_Aggregator/
 
 ---
 
-## ⚙️ Setup Guide
+##  Setup Guide
 
 ### 1. Clone the repo
 ```bash
@@ -92,7 +92,7 @@ Go to your repo → **Settings → Secrets and variables → Actions** and add:
 | `GROQ_API_KEY` | Your Groq API key |
 | `RESEND_API_KEY` | Your Resend API key |
 
-### 5. That's it! 🎉
+### 5. That's it! 
 The workflow runs automatically every day at 7AM IST via GitHub Actions. No server or hosting needed!
 
 To test manually: **Actions → Daily AI News Digest → Run workflow**
@@ -102,15 +102,15 @@ To test manually: **Actions → Daily AI News Digest → Run workflow**
 ## 📧 Sample Email
 
 The digest includes for each article:
-- 📌 Title + direct link
-- 📝 3-4 sentence AI summary
-- ✅ 3 key points
-- 🏷️ Category tag
-- 🔗 Read Article button
+-  Title + direct link
+- 3-4 sentence AI summary
+- 3 key points
+- Category tag
+- Read Article button
 
 ---
 
-## 🔧 Local Development
+## Local Development
 
 ```bash
 pip install -r requirements.txt
