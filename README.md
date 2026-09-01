@@ -1,126 +1,81 @@
-#  AI News Aggregator
+# AI News Aggregator
 
-> A fully automated AI-powered news digest that scrapes, summarizes, and delivers personalized tech news to your inbox every morning at 7AM IST — no servers, no cost, no effort.
+A fully automated AI-powered news digest that scrapes, summarizes, and delivers personalized tech news to users every morning.
 
----
+## What It Does
 
-##  What It Does
+- Scrapes AI and tech articles from HackerNews and Dev.to.
+- Summarizes articles using Groq LLMs.
+- Personalizes articles based on user interests.
+- Sends daily email digests to users.
 
-Every day at **7:00 AM IST**, this pipeline automatically:
+## Tech Stack
 
-1. **Scrapes** the latest AI & tech articles from HackerNews and Dev.to
-2. **Summarizes** each article using Llama 3.1 via Groq
-3. **Personalizes** the digest based on your interests
-4. **Emails** a beautiful HTML digest straight to your inbox
+Python, LangGraph, LangChain, Groq, FastAPI, Supabase PostgreSQL, Playwright, SendGrid, Docker, GitHub Actions.
 
-Zero manual effort after setup. 
-
----
-
-##  Tech Stack
-
-| Layer | Tool |
-|-------|------|
-| Scraping | Playwright (Chromium) |
-| AI Summarization | Groq (Llama 3.1 8B) |
-| Orchestration | LangGraph + LangChain |
-| Scheduling | GitHub Actions (free) |
-| Database | Supabase (PostgreSQL) |
-| Email | Resend |
-| Backend | FastAPI + APScheduler |
-
----
-
-##  Project Structure
+## Project Structure
 
 ```
 AI_News_Aggregator/
 ├── agents/
-│   └── scraper_agent.py      # Scrapes HackerNews & Dev.to
 ├── api/
-│   └── main.py               # FastAPI app + full pipeline
-├── db/                       # Database schema
-├── notebooks/                # Experimentation notebooks
+├── db/
+├── auth/
+├── dashboard/
+├── utils/
 ├── .github/
 │   └── workflows/
-│       └── daily_digest.yml  # GitHub Actions scheduler
-├── run_pipeline.py           # Pipeline entry point
+│       └── daily_digest.yml
+├── run_pipeline.py
 ├── requirements.txt
+├── Dockerfile
 └── README.md
 ```
 
----
+## Setup
 
-##  Setup Guide
+Clone the repository and install dependencies:
 
-### 1. Clone the repo
-```bash
+```
 git clone https://github.com/meena1905/AI_News_Aggregator.git
 cd AI_News_Aggregator
-```
-
-### 2. Set up Supabase
-- Create a free project at [supabase.com](https://supabase.com)
-- Run this SQL to create the users table:
-
-```sql
-CREATE TABLE users (
-  user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  email TEXT NOT NULL UNIQUE,
-  interests JSONB DEFAULT '[]',
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
-INSERT INTO users (name, email, interests) VALUES (
-  'Your Name',
-  'your@email.com',
-  '["AI", "LLM", "machine learning", "tech"]'
-);
-```
-
-### 3. Get API Keys
-- **Groq:** [console.groq.com](https://console.groq.com) → API Keys
-- **Resend:** [resend.com](https://resend.com) → API Keys
-
-### 4. Add GitHub Secrets
-Go to your repo → **Settings → Secrets and variables → Actions** and add:
-
-| Secret | Value |
-|--------|-------|
-| `DATABASE_URL` | Your Supabase connection string |
-| `GROQ_API_KEY` | Your Groq API key |
-| `RESEND_API_KEY` | Your Resend API key |
-
-### 5. That's it! 
-The workflow runs automatically every day at 7AM IST via GitHub Actions. No server or hosting needed!
-
-To test manually: **Actions → Daily AI News Digest → Run workflow**
-
----
-
-## Sample Email
-
-The digest includes for each article:
--  Title + direct link
-- 3-4 sentence AI summary
-- 3 key points
-- Category tag
-- Read Article button
-
----
-
-## Local Development
-
-```bash
 pip install -r requirements.txt
-playwright install chromium --with-deps
-cp .env.example .env  # add your keys
+playwright install chromium
+```
+
+Add the required environment variables (e.g. in a `.env` file):
+
+```
+DATABASE_URL=
+GROQ_API_KEY=
+SENDGRID_API_KEY=
+SENDGRID_FROM=
+SENTRY_DSN=
+```
+
+Run the API locally:
+
+```
+uvicorn api.main:app --reload
+```
+
+Run the news pipeline manually:
+
+```
 python run_pipeline.py
 ```
+
+The daily pipeline is automated using GitHub Actions (`.github/workflows/daily_digest.yml`), which triggers `run_pipeline.py` on a scheduled cron job.
+
+## Deployment
+
+The FastAPI application is containerized with Docker and deployed on Render.
+
+```
+docker build -t ai-news-aggregator .
+docker run -p 8000:8000 --env-file .env ai-news-aggregator
+```
+
 ## License
 
-[MIT](LICENSE) — Developed by [Meenakshi](https://github.com/meena1905)
-
----
-
+MIT License-Developed by Meenakshi S
