@@ -1,4 +1,7 @@
 # AI News Aggregator
+## Live App Link
+
+[AI News Aggregator](https://ai-news-aggregator-6bw5.onrender.com)
 
 A fully automated AI-powered news digest that scrapes, summarizes, and delivers personalized tech news to users every morning.
 
