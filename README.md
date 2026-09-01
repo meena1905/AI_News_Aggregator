@@ -1,5 +1,5 @@
 # AI News Aggregator
-## Live App Link
+### Live Link
 
 [AI News Aggregator](https://ai-news-aggregator-6bw5.onrender.com)
 
