@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Log In — AI News Aggregator</title>
+<style>
+  :root {
+    --bg: #0a0a12; --bg-panel: #111120;
+    --purple-1: #4c1d95; --purple-2: #7c3aed; --purple-3: #a78bfa;
+    --purple-glow: rgba(124, 58, 237, 0.35);
+    --text-main: #f5f3ff; --text-dim: #a1a1c2; --text-faint: #6b6b8a;
+    --border: rgba(167, 139, 250, 0.15); --red: #f87171;
+    --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', 'Segoe UI', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background:
+      radial-gradient(ellipse 700px 500px at 15% 10%, rgba(124,58,237,0.16) 0%, transparent 55%),
+      radial-gradient(ellipse 700px 500px at 85% 90%, rgba(76,29,149,0.16) 0%, transparent 55%),
+      var(--bg);
+    min-height: 100vh;
+    color: var(--text-main); font-family: var(--font-body); -webkit-font-smoothing: antialiased;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  a { color: inherit; text-decoration: none; }
+  ::selection { background: rgba(124,58,237,0.35); color: #fff; }
+  .card {
+    width: 100%; max-width: 400px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.008)), var(--bg-panel);
+    border: 1px solid var(--border); border-radius: 20px; padding: 40px 36px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 40px 80px -30px rgba(0,0,0,0.7);
+  }
+  .brand { text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 17px; margin-bottom: 28px; }
+  h1 { font-family: var(--font-display); font-size: 24px; font-weight: 700; margin-bottom: 6px; text-align: center; letter-spacing: -0.02em; }
+  .sub { font-size: 13px; color: var(--text-dim); text-align: center; margin-bottom: 30px; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 7px; }
+  .field input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text-main);
+    border-radius: 9px; padding: 12px 14px; font-size: 14px; font-family: inherit;
+    transition: border-color 0.2s ease;
+  }
+  .field input:focus { outline: none; border-color: var(--purple-3); }
+  .field input::placeholder { color: var(--text-faint); }
+  .field .error { font-size: 11.5px; color: var(--red); margin-top: 6px; display: none; }
+  .field.invalid input { border-color: var(--red); }
+  .field.invalid .error { display: block; }
+  .row-between { display: flex; justify-content: flex-end; margin: -6px 0 22px; }
+  .row-between a { font-size: 12.5px; color: var(--purple-3); }
+  .row-between a:hover { text-decoration: underline; }
+  .btn-primary {
+    width: 100%; background: linear-gradient(135deg, var(--purple-2), var(--purple-1));
+    border: none; color: #fff; padding: 13px; border-radius: 10px;
+    font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 32px var(--purple-glow); filter: brightness(1.08); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .footer-link { text-align: center; font-size: 13px; color: var(--text-dim); margin-top: 22px; }
+  .footer-link a { color: var(--purple-3); font-weight: 600; }
+  .footer-link a:hover { text-decoration: underline; }
+  .note {
+    margin-top: 22px; font-size: 11px; color: var(--text-faint); text-align: center; line-height: 1.6;
+    border-top: 1px solid var(--border); padding-top: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">AI News Aggregator</div>
+  <h1>Welcome back</h1>
+  <div class="sub">Log in to see your personalized digests</div>
+  <form id="login-form" novalidate>
+    <div class="field" id="email-field">
+      <label>Email</label>
+      <input type="email" id="email" placeholder="you@example.com" />
+      <div class="error">Enter a valid email address</div>
+    </div>
+    <div class="field" id="password-field">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="••••••••" />
+      <div class="error">Password is required</div>
+    </div>
+    <div class="row-between">
+      <a href="forgot-password.html">Forgot password?</a>
+    </div>
+    <button type="submit" class="btn-primary">Log In</button>
+  </form>
+  <div class="footer-link">Don't have an account? <a href="signup.html">Sign up</a></div>
+</div>
+<script>
+  const form = document.getElementById("login-form");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    let valid = true;
+    const email = document.getElementById("email");
+    const emailField = document.getElementById("email-field");
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
+    emailField.classList.toggle("invalid", !emailValid);
+    if (!emailValid) valid = false;
+    const password = document.getElementById("password");
+    const passwordField = document.getElementById("password-field");
+    const passwordValid = password.value.length > 0;
+    passwordField.classList.toggle("invalid", !passwordValid);
+    if (!passwordValid) valid = false;
+    if (valid) {
+      const submitBtn = form.querySelector("button[type=submit]");
+      submitBtn.textContent = "Logging in…";
+      submitBtn.disabled = true;
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.value.trim(), password: password.value }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          passwordField.classList.add("invalid");
+          passwordField.querySelector(".error").textContent = err.detail || "Invalid email or password";
+          submitBtn.textContent = "Log In";
+          submitBtn.disabled = false;
+          return;
+        }
+        const user = await res.json();
+        localStorage.setItem("current_user_id", user.user_id);
+        localStorage.setItem("current_user_name", user.name);
+        window.location.href = "dashboard.html";
+      } catch (err) {
+        console.error(err);
+        submitBtn.textContent = "Log In — is the server running?";
+        submitBtn.disabled = false;
+      }
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>How It Works — AI News Aggregator</title>
+<style>
+  :root {
+    --bg: #0a0a12; --bg-panel: #111120;
+    --purple-1: #4c1d95; --purple-2: #7c3aed; --purple-3: #a78bfa;
+    --purple-glow: rgba(124, 58, 237, 0.35);
+    --text-main: #f5f3ff; --text-dim: #a1a1c2; --text-faint: #6b6b8a;
+    --border: rgba(167, 139, 250, 0.15);
+    --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', 'Segoe UI', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background:
+      radial-gradient(ellipse 800px 500px at 12% -5%, rgba(124,58,237,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 700px 500px at 90% 105%, rgba(76,29,149,0.16) 0%, transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--text-main); font-family: var(--font-body); -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  h1, h4 { letter-spacing: -0.02em; }
+  nav {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(10,10,18,0.72);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 56px; border-bottom: 1px solid var(--border);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+  .logo-mark { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg, var(--purple-2), var(--purple-1)); display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 0 20px var(--purple-glow); }
+  .nav-links { display: flex; gap: 36px; font-size: 14px; color: var(--text-dim); }
+  .nav-links a:hover, .nav-links a.active { color: var(--text-main); }
+  .nav-links a.active { color: var(--purple-3); }
+  .nav-cta { background: linear-gradient(135deg, var(--purple-2), var(--purple-1)); padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 600; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 32px var(--purple-glow); }
+  .hero {
+    text-align: center; padding: 70px 24px 20px; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(167,139,250,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(167,139,250,0.05) 1px, transparent 1px);
+    background-size: 42px 42px;
+    -webkit-mask-image: radial-gradient(ellipse 700px 350px at 50% 20%, black 0%, transparent 75%);
+    mask-image: radial-gradient(ellipse 700px 350px at 50% 20%, black 0%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 12px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--purple-3);
+    border: 1px solid var(--border); padding: 6px 14px; border-radius: 999px; margin-bottom: 18px;
+    position: relative;
+  }
+  .hero h1 { font-family: var(--font-display); font-size: 40px; font-weight: 700; margin-bottom: 12px; position: relative; }
+  .hero p { font-size: 15px; color: var(--text-dim); max-width: 480px; margin: 0 auto; position: relative; }
+  .flowchart { max-width: 1080px; margin: 60px auto 30px; padding: 0 40px; position: relative; }
+  .flow-track { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+  .flow-line {
+    position: absolute; top: 44px; left: calc(12.5% - 4px); right: calc(12.5% - 4px); height: 2px;
+    background: linear-gradient(90deg, transparent, var(--purple-3) 8%, var(--purple-3) 92%, transparent);
+    opacity: 0.35; z-index: 0;
+  }
+  .flow-pulse {
+    position: absolute; top: 40px; left: 0; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--purple-3); box-shadow: 0 0 14px 4px var(--purple-glow);
+    animation: travel 5s linear infinite; z-index: 1;
+  }
+  @keyframes travel {
+    0%   { left: 12.5%; opacity: 0; }
+    5%   { opacity: 1; }
+    95%  { opacity: 1; }
+    100% { left: 87.5%; opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .flow-pulse { animation: none; opacity: 0; } }
+  .flow-node {
+    position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center;
+    text-align: center; padding: 0 14px;
+    opacity: 0; transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .flow-node.visible { opacity: 1; transform: translateY(0); }
+  .flow-node:nth-child(3) { transition-delay: 0.1s; }
+  .flow-node:nth-child(4) { transition-delay: 0.2s; }
+  .flow-node:nth-child(5) { transition-delay: 0.3s; }
+  .flow-icon {
+    width: 88px; height: 88px; border-radius: 50%;
+    background: linear-gradient(150deg, #8b5cf6 0%, var(--purple-2) 45%, var(--purple-1) 100%);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 22px; position: relative;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.08) inset,
+      0 2px 0 rgba(255,255,255,0.18) inset,
+      0 0 40px var(--purple-glow),
+      0 16px 32px -12px rgba(76,29,149,0.7);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .flow-icon svg { width: 34px; height: 34px; stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .flow-node:hover .flow-icon { transform: translateY(-4px) scale(1.05); box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 2px 0 rgba(255,255,255,0.18) inset, 0 0 56px var(--purple-glow), 0 20px 40px -12px rgba(76,29,149,0.8); }
+  .flow-num {
+    position: absolute; top: -4px; right: -2px; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--bg-panel); border: 1px solid var(--purple-3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--purple-3);
+  }
+  .flow-node h4 { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .flow-node p { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; max-width: 200px; }
+  .flow-tech {
+    margin-top: 10px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--purple-3); background: rgba(124,58,237,0.12);
+    padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(124,58,237,0.25);
+  }
+  @media (max-width: 900px) {
+    nav { padding: 18px 24px; } .nav-links { display: none; }
+    .hero h1 { font-size: 28px; }
+    .flowchart { padding: 0 24px; }
+    .flow-track { grid-template-columns: 1fr; gap: 36px; }
+    .flow-line, .flow-pulse { display: none; }
+    .flow-node p { max-width: 320px; }
+  }
+  .built-with-wrap { max-width: 1000px; margin: 70px auto 90px; padding: 0 24px; text-align: center; }
+  .built-with-wrap .label { font-size: 12px; color: var(--text-dim); margin-bottom: 18px; }
+  .built-with-wrap .label span { color: #f472b6; }
+  .tool-row { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .tool-chip {
+    display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim);
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01)), var(--bg-panel);
+    border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .tool-chip:hover { transform: translateY(-2px); border-color: rgba(167,139,250,0.4); }
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">AI News Aggregator</div>
+  <div class="nav-links">
+    <a href="features.html">Features</a>
+    <a href="how-it-works.html" class="active">How It Works</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="email-preview.html">Email Preview</a>
+  </div>
+  <div id="auth-chip" style="margin-right:14px;"></div>
+  <a href="dashboard.html" class="nav-cta">Get Started</a>
+</nav>
+<section class="hero">
+  <h1>How It Works</h1>
+</section>
+<div class="flowchart">
+  <div class="flow-track">
+    <div class="flow-line"></div>
+    <div class="flow-pulse"></div>
+    <div class="flow-node">
+      <div class="flow-icon">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <div class="flow-num">1</div>
+      </div>
+      <h4>Scrape</h4>
+      <p>Playwright pulls the latest articles from HackerNews and Dev.to.</p>
+      <div class="flow-tech">Playwright</div>
+    </div>
+    <div class="flow-node">
+      <div class="flow-icon">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+        <div class="flow-num">2</div>
+      </div>
+      <h4>Summarize</h4>
+      <p>Llama 3.1 via Groq condenses each article into key insights.</p>
+      <div class="flow-tech">Groq · Llama 3.1</div>
+    </div>
+    <div class="flow-node">
+      <div class="flow-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="#fff"/></svg>
+        <div class="flow-num">3</div>
+      </div>
+      <h4>Personalize</h4>
+      <p>Articles are matched and ranked against your stored interests.</p>
+      <div class="flow-tech">LangGraph</div>
+    </div>
+    <div class="flow-node">
+      <div class="flow-icon">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z" style="display:none"/><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+        <div class="flow-num">4</div>
+      </div>
+      <h4>Deliver</h4>
+      <p>A beautiful HTML digest is emailed to you every day at 7AM IST.</p>
+      <div class="flow-tech">Resend</div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+  const nodes = document.querySelectorAll(".flow-node");
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add("visible");
+    });
+  }, { threshold: 0.2 });
+  nodes.forEach(n => observer.observe(n));
+</script>
+<script src="auth.js"></script>
+<script>renderAuthChip("auth-chip");</script>
+</body>
+</html>

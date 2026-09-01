@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Articles — AI News Aggregator</title>
+<style>
+  :root {
+    --bg: #0a0a12; --bg-panel: #111120; --bg-sidebar: #0d0d18;
+    --purple-1: #4c1d95; --purple-2: #7c3aed; --purple-3: #a78bfa;
+    --purple-glow: rgba(124, 58, 237, 0.35);
+    --text-main: #f5f3ff; --text-dim: #a1a1c2; --text-faint: #6b6b8a;
+    --border: rgba(167, 139, 250, 0.15); --green: #34d399;
+    --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', 'Segoe UI', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text-main); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  .sidebar { background: var(--bg-sidebar); border-right: 1px solid var(--border); padding: 24px 16px; display: flex; flex-direction: column; }
+  .logo { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; font-size: 16px; padding: 0 10px 28px; }
+  .logo-mark { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, var(--purple-2), var(--purple-1)); display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 0 16px var(--purple-glow); }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 9px; font-size: 14px; color: var(--text-dim); margin-bottom: 2px; }
+  .nav-item:hover { background: rgba(124,58,237,0.08); color: var(--text-main); }
+  .nav-item.active { background: linear-gradient(135deg, rgba(124,58,237,0.25), rgba(76,29,149,0.25)); color: var(--text-main); border: 1px solid var(--border); }
+  .sidebar-footer { margin-top: auto; padding: 11px 14px; font-size: 14px; color: var(--text-dim); }
+  .sidebar-footer a, .sidebar-footer button { background: none; border: none; color: inherit; font: inherit; cursor: pointer; padding: 0; }
+  .main { padding: 32px 40px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .topbar h1 { font-family: var(--font-display); font-size: 24px; font-weight: 700; }
+  .topbar p { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+  .user-chip { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-dim); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--purple-2), var(--purple-1)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: white; }
+
+  .filter-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-chip { border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; font-size: 13px; color: var(--text-dim); }
+  .filter-chip.active { background: rgba(124,58,237,0.2); color: var(--text-main); border-color: var(--purple-3); }
+
+  .article-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .article-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 9px; border-radius: 6px; background: rgba(124,58,237,0.2); color: var(--purple-3); }
+  .source-tag { font-size: 11px; color: var(--text-faint); }
+  .article-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 8px; line-height: 1.4; }
+  .article-card p { font-size: 12px; color: var(--text-dim); line-height: 1.6; margin-bottom: 12px; }
+  .card-bottom { display: flex; align-items: center; justify-content: space-between; }
+  .relevance { font-size: 11px; color: var(--text-faint); }
+  .relevance b { color: var(--green); }
+  .read-link { font-size: 12px; font-weight: 600; color: var(--purple-3); }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; } .sidebar { display: none; } .main { padding: 20px; }
+    .article-grid { grid-template-columns: 1fr; }
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background:
+      radial-gradient(ellipse 800px 500px at 12% -5%, rgba(124,58,237,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 700px 500px at 90% 105%, rgba(76,29,149,0.16) 0%, transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    letter-spacing: -0.005em;
+  }
+  h1, h2, h3, h4, .stat-value, .logo { letter-spacing: -0.02em; }
+  ::selection { background: rgba(124,58,237,0.35); color: #fff; }
+  nav {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(10,10,18,0.72);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .sidebar {
+    background: rgba(13,13,24,0.75) !important;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .panel, .stat-card, .feature-card, .article-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01)) , var(--bg-panel);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 24px 48px -24px rgba(0,0,0,0.65);
+    transition: transform 0.25s cubic-bezier(.2,.8,.2,1), border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .stat-card:hover, .article-card:hover, .feature-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(167,139,250,0.4);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 28px 56px -20px rgba(124,58,237,0.32);
+  }
+  .panel:hover { border-color: rgba(167,139,250,0.22); }
+  tr td { transition: background 0.15s ease; }
+  .btn-primary, .nav-cta {
+    position: relative;
+    transition: transform 0.2s cubic-bezier(.2,.8,.2,1), box-shadow 0.2s ease, filter 0.2s ease;
+  }
+  .btn-primary:hover, .nav-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px var(--purple-glow);
+    filter: brightness(1.08);
+  }
+  .btn-secondary, .btn-ghost, .filter-chip, .chip {
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+  }
+  .btn-secondary:hover, .btn-ghost:hover, .filter-chip:hover, .chip:hover {
+    border-color: rgba(167,139,250,0.5);
+    transform: translateY(-1px);
+  }
+  .nav-item { transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease; }
+  .nav-item:hover { transform: translateX(2px); }
+  .logo-mark, .step-icon, .avatar {
+    box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 0 24px var(--purple-glow);
+  }
+  .status-pill { box-shadow: 0 0 0 1px rgba(52,211,153,0.25) inset; }
+  .tag { box-shadow: 0 0 0 1px rgba(124,58,237,0.3) inset; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">AI News Aggregator</div>
+    <a href="dashboard.html" class="nav-item">Dashboard</a>
+    <a href="digests.html" class="nav-item">Digests</a>
+    <a href="articles.html" class="nav-item active">Articles</a>
+    <a href="preferences.html" class="nav-item">Preferences</a>
+    <a href="how-it-works.html" class="nav-item">How It Works</a>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Articles</h1>
+      </div>
+      <div class="user-chip" id="auth-chip"></div>
+    </div>
+    <div class="filter-row">
+      <div class="filter-chip active">All sources</div>
+      <div class="filter-chip">HackerNews</div>
+      <div class="filter-chip">Dev.to</div>
+      <div class="filter-chip">LLM</div>
+      <div class="filter-chip">Research</div>
+      <div class="filter-chip">Tools</div>
+    </div>
+    <div class="article-grid" id="article-grid">
+      <p style="color:var(--text-faint);grid-column:1/-1;">Loading…</p>
+    </div>
+  </main>
+</div>
+<script>
+  async function loadArticles(source) {
+    const grid = document.getElementById("article-grid");
+    grid.innerHTML = `<p style="color:var(--text-faint);grid-column:1/-1;">Loading…</p>`;
+    try {
+      const url = source && source !== "all"
+        ? `/api/articles?source=${encodeURIComponent(source)}&limit=20`
+        : `/api/articles?limit=20`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("API error");
+      const data = await res.json();
+      if (data.articles.length === 0) {
+        grid.innerHTML = `<p style="color:var(--text-faint);grid-column:1/-1;">No articles scraped yet</p>`;
+        return;
+      }
+      grid.innerHTML = data.articles.map(a => {
+        let keyPoints = a.key_points;
+        if (typeof keyPoints === "string") { try { keyPoints = JSON.parse(keyPoints); } catch { keyPoints = []; } }
+        return `
+        <div class="article-card">
+          <div class="card-top">
+            <span class="tag">${a.category || "other"}</span>
+            <span class="source-tag">${a.source}</span>
+          </div>
+          <h4>${a.title}</h4>
+          <p>${a.summary || ""}</p>
+          <div class="card-bottom">
+            <span class="relevance">Relevance <b>${Math.round((a.relevance_score || 0) * 100)}%</b></span>
+            <a href="${a.url}" target="_blank" class="read-link">Read Article →</a>
+          </div>
+        </div>`;
+      }).join("");
+    } catch (err) {
+      console.warn("Falling back to sample data — API not reachable:", err);
+      grid.innerHTML = `<p style="color:var(--text-faint);grid-column:1/-1;">
+        Sample data — start the FastAPI server (uvicorn api.main:app) to see real articles
+      </p>`;
+    }
+  }
+  document.querySelectorAll(".filter-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      const source = chip.textContent.trim().toLowerCase() === "all sources" ? "all"
+        : chip.textContent.trim().toLowerCase() === "hackernews" ? "hackernews"
+        : chip.textContent.trim().toLowerCase() === "dev.to" ? "devto"
+        : "all";
+      loadArticles(source);
+    });
+  });
+  loadArticles("all");
+</script>
+<script src="auth.js"></script>
+<script>renderAuthChip("auth-chip");</script>
+<script src="auth.js"></script>
+<script>renderAuthChip("auth-chip");</script>
+</body>
+</html>

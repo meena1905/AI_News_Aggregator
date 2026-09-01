@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Features — AI News Aggregator</title>
+<style>
+  :root {
+    --bg: #0a0a12; --bg-panel: #111120;
+    --purple-1: #4c1d95; --purple-2: #7c3aed; --purple-3: #a78bfa;
+    --purple-glow: rgba(124, 58, 237, 0.35);
+    --text-main: #f5f3ff; --text-dim: #a1a1c2; --text-faint: #6b6b8a;
+    --border: rgba(167, 139, 250, 0.15);
+    --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', 'Segoe UI', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background:
+      radial-gradient(ellipse 800px 500px at 12% -5%, rgba(124,58,237,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 700px 500px at 90% 105%, rgba(76,29,149,0.16) 0%, transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--text-main); font-family: var(--font-body); -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
+  }
+  a { color: inherit; text-decoration: none; }
+  h1, h4 { letter-spacing: -0.02em; }
+  ::selection { background: rgba(124,58,237,0.35); color: #fff; }
+  nav {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(10,10,18,0.72);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 56px; border-bottom: 1px solid var(--border);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+  .logo-mark {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--purple-2), var(--purple-1));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 0 20px var(--purple-glow);
+  }
+  .logo-mark svg { width: 17px; height: 17px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-links { display: flex; gap: 36px; font-size: 14px; color: var(--text-dim); }
+  .nav-links a { transition: color 0.2s ease; }
+  .nav-links a:hover, .nav-links a.active { color: var(--text-main); }
+  .nav-links a.active { color: var(--purple-3); }
+  .nav-cta {
+    background: linear-gradient(135deg, var(--purple-2), var(--purple-1));
+    padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    transition: transform 0.2s cubic-bezier(.2,.8,.2,1), box-shadow 0.2s ease, filter 0.2s ease;
+  }
+  .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 32px var(--purple-glow); filter: brightness(1.08); }
+  .hero { text-align: center; padding: 84px 24px 30px; position: relative; overflow: hidden; }
+  .hero::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(167,139,250,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(167,139,250,0.05) 1px, transparent 1px);
+    background-size: 42px 42px;
+    -webkit-mask-image: radial-gradient(ellipse 750px 380px at 50% 15%, black 0%, transparent 75%);
+    mask-image: radial-gradient(ellipse 750px 380px at 50% 15%, black 0%, transparent 75%);
+    pointer-events: none;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 12px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--purple-3);
+    border: 1px solid var(--border); padding: 6px 14px; border-radius: 999px;
+    margin-bottom: 22px; position: relative;
+  }
+  .hero h1 { font-family: var(--font-display); font-size: 44px; font-weight: 700; margin-bottom: 14px; position: relative; }
+  .hero p { font-size: 15px; color: var(--text-dim); max-width: 480px; margin: 0 auto; position: relative; line-height: 1.6; }
+  .features {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px;
+    max-width: 1120px; margin: 0 auto; padding: 20px 56px 40px;
+  }
+  .feature-card {
+    position: relative;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.008)), var(--bg-panel);
+    border: 1px solid var(--border); border-radius: 18px; padding: 30px 26px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 24px 48px -28px rgba(0,0,0,0.7);
+    transition: transform 0.3s cubic-bezier(.2,.8,.2,1), border-color 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0; transform: translateY(18px);
+    animation: rise 0.65s cubic-bezier(.2,.8,.2,1) forwards;
+    overflow: hidden;
+  }
+  .feature-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--purple-3), transparent);
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .feature-card:hover::before { opacity: 0.8; }
+  .feature-card:nth-child(1) { animation-delay: 0.05s; }
+  .feature-card:nth-child(2) { animation-delay: 0.14s; }
+  .feature-card:nth-child(3) { animation-delay: 0.23s; }
+  .feature-card:nth-child(4) { animation-delay: 0.32s; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+  .feature-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(167,139,250,0.4);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 32px 60px -24px rgba(124,58,237,0.35);
+  }
+  .feature-kicker {
+    font-family: var(--font-display); font-size: 11px; font-weight: 700;
+    color: var(--purple-3); letter-spacing: 0.08em; margin-bottom: 16px; opacity: 0.85;
+  }
+  .feature-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(150deg, #8b5cf6 0%, var(--purple-2) 45%, var(--purple-1) 100%);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px; position: relative;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.1) inset,
+      0 2px 0 rgba(255,255,255,0.15) inset,
+      0 0 28px var(--purple-glow);
+    transition: transform 0.3s ease;
+  }
+  .feature-card:hover .feature-icon { transform: rotate(-4deg) scale(1.05); }
+  .feature-icon svg { width: 23px; height: 23px; stroke: #fff; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .feature-card h4 { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+  .feature-card p { font-size: 13px; color: var(--text-dim); line-height: 1.65; }
+  .cta-strip {
+    max-width: 1000px; margin: 40px auto 100px; padding: 36px 40px;
+    border: 1px solid var(--border); border-radius: 20px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(76,29,149,0.08));
+    display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  }
+  .cta-strip h3 { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .cta-strip p { font-size: 13px; color: var(--text-dim); }
+  .cta-strip .nav-cta { white-space: nowrap; }
+
+  @media (max-width: 900px) {
+    nav { padding: 18px 24px; } .nav-links { display: none; }
+    .features { grid-template-columns: repeat(2, 1fr); padding: 20px 24px 30px; }
+    .hero h1 { font-size: 30px; }
+    .cta-strip { margin: 30px 24px 70px; flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">
+    AI News Aggregator
+  </div>
+  <div class="nav-links">
+    <a href="features.html" class="active">Features</a>
+    <a href="how-it-works.html">How It Works</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="email-preview.html">Email Preview</a>
+  </div>
+  <div id="auth-chip" style="margin-right:14px;"></div>
+  <a href="dashboard.html" class="nav-cta">View Dashboard</a>
+</nav>
+<section class="hero">
+  <h1>Features</h1>
+</section>
+<section class="features">
+  <div class="feature-card">
+    <div class="feature-kicker">01</div>
+    <div class="feature-icon">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
+    <h4>Multi-Source Scraping</h4>
+    <p>Playwright pulls fresh articles from HackerNews &amp; Dev.to every run.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-kicker">02</div>
+    <div class="feature-icon">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+    </div>
+    <h4>LLM Summarization</h4>
+    <p>Every article is condensed into a summary, key points, and a category.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-kicker">03</div>
+    <div class="feature-icon">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="#fff"/></svg>
+    </div>
+    <h4>Interest Personalization</h4>
+    <p>Articles are ranked per user against their stored interests.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-kicker">04</div>
+    <div class="feature-icon">
+      <svg viewBox="0 0 24 24"><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+    </div>
+    <h4>Automated Delivery</h4>
+    <p>GitHub Actions triggers the full pipeline daily — no server required.</p>
+  </div>
+</section>
+<div class="cta-strip">
+  <div>
+    <h3>See it running with real data</h3>
+  </div>
+  <a href="dashboard.html" class="nav-cta">View Dashboard →</a>
+</div>
+<script src="auth.js"></script>
+<script>renderAuthChip("auth-chip");</script>
+</body>
+</html>

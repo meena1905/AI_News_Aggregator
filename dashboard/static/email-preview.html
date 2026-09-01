@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Email Preview - AI News Aggregator</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link
+  href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+>
+
+<style>
+
+  :root {
+    --bg: #0a0a12;
+    --bg-panel: #111120;
+
+    --purple-1: #4c1d95;
+    --purple-2: #7c3aed;
+    --purple-3: #a78bfa;
+
+    --purple-glow: rgba(124, 58, 237, 0.35);
+
+    --text-main: #f5f3ff;
+    --text-dim: #a1a1c2;
+    --text-faint: #6b6b8a;
+
+    --border: rgba(167, 139, 250, 0.15);
+
+    --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', 'Segoe UI', sans-serif;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background:
+      radial-gradient(
+        ellipse 800px 500px at 12% -5%,
+        rgba(124,58,237,0.14) 0%,
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 700px 500px at 90% 105%,
+        rgba(76,29,149,0.16) 0%,
+        transparent 55%
+      ),
+      var(--bg);
+
+    background-attachment: fixed;
+
+    color: var(--text-main);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+
+    background: rgba(10,10,18,0.72);
+
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    padding: 18px 40px;
+
+    border-bottom: 1px solid var(--border);
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 14px;
+  }
+
+  .back-link {
+    color: var(--text-dim);
+    font-size: 18px;
+  }
+
+  .back-link:hover {
+    color: var(--text-main);
+  }
+
+  .btn-primary {
+    background:
+      linear-gradient(
+        135deg,
+        var(--purple-2),
+        var(--purple-1)
+      );
+
+    padding: 9px 18px;
+
+    border-radius: 8px;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    border: none;
+
+    color: white;
+
+    cursor: pointer;
+  }
+
+  .main {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  .selector-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    margin-bottom: 24px;
+
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .selector-row select {
+    background: var(--bg-panel);
+
+    border: 1px solid var(--border);
+
+    color: var(--text-main);
+
+    padding: 8px 12px;
+
+    border-radius: 8px;
+
+    font-size: 13px;
+  }
+
+  .email-frame {
+    border: 1px solid var(--border);
+
+    border-radius: 16px;
+
+    overflow: hidden;
+
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+
+  .empty {
+    color: var(--text-faint);
+
+    font-size: 13px;
+
+    padding: 60px 24px;
+
+    text-align: center;
+  }
+
+</style>
+</head>
+
+<body>
+
+<nav>
+
+  <div class="nav-left">
+
+    <a
+      href="dashboard.html"
+      class="back-link"
+    >
+      ←
+    </a>
+
+    <span>
+      Email Preview
+    </span>
+
+  </div>
+
+  <div
+    style="
+      display:flex;
+      align-items:center;
+      gap:14px;
+    "
+  >
+
+    <div id="auth-chip"></div>
+
+    <button
+      class="btn-primary"
+      id="send-test-btn"
+      onclick="sendTestEmail()"
+    >
+      Send Test Email
+    </button>
+
+  </div>
+
+</nav>
+
+<div class="main">
+
+  <div class="selector-row">
+
+    <span>
+      Previewing:
+    </span>
+
+    <select id="digest-picker">
+      <option>
+        Loading…
+      </option>
+    </select>
+
+  </div>
+
+  <div
+    class="email-frame"
+    id="email-frame"
+  >
+
+    <div class="empty">
+      Loading…
+    </div>
+
+  </div>
+
+</div>
+
+<script src="auth.js"></script>
+
+<script>
+
+  /*
+   * The backend now authenticates using the
+   * HttpOnly session_token cookie.
+   *
+   * We DO NOT get the user ID from the URL.
+   * We DO NOT send user_id to protected APIs.
+   */
+  const currentUser = getCurrentUser();
+
+  if (!currentUser) {
+    window.location.href = "login.html";
+  }
+
+</script>
+
+<script>
+
+  let digestList = [];
+
+  let currentDigestId = null;
+
+
+  function renderEmail(digest) {
+
+    const dateStr =
+      new Date(
+        digest.sent_at
+      ).toLocaleDateString(
+        "en-US",
+        {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric"
+        }
+      );
+
+
+    const articlesHtml =
+      digest.articles.map(
+        (a, i) => {
+
+          let keyPoints =
+            a.key_points;
+
+          if (
+            typeof keyPoints === "string"
+          ) {
+
+            try {
+
+              keyPoints =
+                JSON.parse(
+                  keyPoints
+                );
+
+            } catch {
+
+              keyPoints = [];
+
+            }
+
+          }
+
+
+          const kpHtml =
+            (keyPoints || [])
+              .slice(0, 3)
+              .map(
+                p =>
+                  `<li style="margin:4px 0;color:#4b5563;font-size:13px;">${p}</li>`
+              )
+              .join("");
+
+
+          return `
+
+            <div
+              style="
+                border:1px solid #e9d5ff;
+                border-radius:12px;
+                padding:20px;
+                margin-bottom:16px;
+                background:#faf5ff;
+              "
+            >
+
+              <div style="margin-bottom:10px;">
+
+                <span
+                  style="
+                    background:#7c3aed;
+                    border-radius:50%;
+                    width:28px;
+                    height:28px;
+                    display:inline-flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-weight:700;
+                    font-size:13px;
+                    color:#fff;
+                  "
+                >
+                  #${i + 1}
+                </span>
+
+                <span
+                  style="
+                    background:#7c3aed30;
+                    color:#7c3aed;
+                    border-radius:6px;
+                    padding:2px 8px;
+                    font-size:11px;
+                    font-weight:600;
+                    text-transform:uppercase;
+                    margin-left:8px;
+                  "
+                >
+                  ${a.category || "other"}
+                </span>
+
+              </div>
+
+
+              <h3
+                style="
+                  margin:0 0 8px;
+                  font-size:16px;
+                  font-weight:600;
+                  color:#4c1d95;
+                "
+              >
+
+                <a
+                  href="${a.url}"
+                  style="
+                    color:#4c1d95;
+                    text-decoration:none;
+                  "
+                >
+                  ${a.title}
+                </a>
+
+              </h3>
+
+
+              <p
+                style="
+                  margin:0 0 12px;
+                  color:#6b21a8;
+                  font-size:14px;
+                  line-height:1.6;
+                "
+              >
+                ${a.summary || ""}
+              </p>
+
+
+              <ul
+                style="
+                  margin:0 0 12px;
+                  padding-left:16px;
+                "
+              >
+                ${kpHtml}
+              </ul>
+
+
+              <div style="text-align:right;">
+
+                <a
+                  href="${a.url}"
+                  style="
+                    background:#7c3aed;
+                    color:#fff;
+                    padding:8px 16px;
+                    border-radius:8px;
+                    font-size:13px;
+                    font-weight:500;
+                    text-decoration:none;
+                  "
+                >
+                  Read Article →
+                </a>
+
+              </div>
+
+            </div>
+
+          `;
+
+        }
+      ).join("");
+
+
+    document.getElementById(
+      "email-frame"
+    ).innerHTML = `
+
+      <div
+        style="
+          font-family:
+            -apple-system,
+            BlinkMacSystemFont,
+            'Segoe UI',
+            sans-serif;
+        "
+      >
+
+        <div
+          style="
+            background:
+              linear-gradient(
+                135deg,
+                #4c1d95 0%,
+                #7c3aed 100%
+              );
+            padding:32px;
+            text-align:center;
+          "
+        >
+
+          <h1
+            style="
+              margin:0;
+              color:#fff;
+              font-size:26px;
+              font-weight:700;
+            "
+          >
+            AI News Digest
+          </h1>
+
+          <p
+            style="
+              margin:8px 0 0;
+              color:#e9d5ff;
+              font-size:14px;
+            "
+          >
+            ${dateStr}
+          </p>
+
+        </div>
+
+
+        <div
+          style="
+            background:#6d28d9;
+            padding:12px 24px;
+            text-align:center;
+          "
+        >
+
+          <p
+            style="
+              margin:0;
+              color:#fff;
+              font-size:13px;
+            "
+          >
+            Personalized for
+            <strong>
+              ${digest.user_name || "you"}
+            </strong>
+          </p>
+
+        </div>
+
+
+        <div
+          style="
+            background:#f5f3ff;
+            padding:24px;
+          "
+        >
+
+          <p
+            style="
+              color:#4c1d95;
+              font-size:15px;
+              line-height:1.6;
+              margin:0 0 20px;
+            "
+          >
+
+            Good morning
+            <strong>
+              ${digest.user_name || "there"}
+            </strong>!
+
+            Here are your top
+
+            <strong>
+              ${digest.articles.length}
+              AI/tech stories
+            </strong>
+
+            for today.
+
+          </p>
+
+          ${articlesHtml}
+
+        </div>
+
+
+        <div
+          style="
+            background:#4c1d95;
+            padding:24px;
+            text-align:center;
+          "
+        >
+
+          <p
+            style="
+              margin:0;
+              color:#e9d5ff;
+              font-size:12px;
+              line-height:1.8;
+            "
+          >
+
+            AI News Aggregator
+            <br>
+
+            <a
+              href="#"
+              style="color:#c4b5fd;"
+            >
+              Unsubscribe
+            </a>
+
+            ·
+
+            <a
+              href="#"
+              style="color:#c4b5fd;"
+            >
+              Update Interests
+            </a>
+
+          </p>
+
+        </div>
+
+      </div>
+
+    `;
+
+  }
+
+
+  async function loadDigestList() {
+
+    try {
+
+      /*
+       * IMPORTANT:
+       * No user_id.
+       *
+       * The server identifies the logged-in
+       * user from session_token.
+       */
+      const res =
+        await fetch(
+          `/api/digests?page=1&page_size=20`
+        );
+
+
+      if (res.status === 401) {
+
+        window.location.href =
+          "login.html";
+
+        return;
+
+      }
+
+
+      if (!res.ok) {
+
+        throw new Error(
+          "API error"
+        );
+
+      }
+
+
+      const data =
+        await res.json();
+
+
+      digestList =
+        data.digests || [];
+
+
+      const picker =
+        document.getElementById(
+          "digest-picker"
+        );
+
+
+      if (
+        digestList.length === 0
+      ) {
+
+        picker.innerHTML =
+          `<option>No digests yet</option>`;
+
+        document.getElementById(
+          "email-frame"
+        ).innerHTML =
+          `
+            <div class="empty">
+              No digests sent yet —
+              run the pipeline first
+            </div>
+          `;
+
+        return;
+
+      }
+
+
+      picker.innerHTML =
+        digestList
+          .map(
+            d =>
+              `
+                <option value="${d.id}">
+                  ${d.date}
+                </option>
+              `
+          )
+          .join("");
+
+
+      picker.addEventListener(
+        "change",
+        () =>
+          loadDigestDetail(
+            picker.value
+          )
+      );
+
+
+      /*
+       * The id query parameter is still allowed.
+       *
+       * Example:
+       *
+       * email-preview.html?id=abc
+       *
+       * But user_id is no longer accepted
+       * or required.
+       */
+      const requestedId =
+        new URLSearchParams(
+          window.location.search
+        ).get("id");
+
+
+      const requested =
+        requestedId &&
+        digestList.find(
+          d => d.id === requestedId
+        );
+
+
+      if (requested) {
+
+        picker.value =
+          requested.id;
+
+        loadDigestDetail(
+          requested.id
+        );
+
+      } else {
+
+        loadDigestDetail(
+          digestList[0].id
+        );
+
+      }
+
+    } catch (err) {
+
+      console.warn(
+        "Failed to load digest list:",
+        err
+      );
+
+      document.getElementById(
+        "digest-picker"
+      ).innerHTML =
+        `<option>Unable to load</option>`;
+
+      document.getElementById(
+        "email-frame"
+      ).innerHTML =
+        `
+          <div class="empty">
+            Failed to load your digests.
+            Please make sure you are logged in
+            and the server is running.
+          </div>
+        `;
+
+    }
+
+  }
+
+
+  async function loadDigestDetail(
+    id
+  ) {
+
+    currentDigestId = id;
+
+    try {
+
+      /*
+       * No user_id.
+       */
+      const res =
+        await fetch(
+          `/api/digests/${encodeURIComponent(id)}`
+        );
+
+
+      if (res.status === 401) {
+
+        window.location.href =
+          "login.html";
+
+        return;
+
+      }
+
+
+      if (!res.ok) {
+
+        throw new Error(
+          "API error"
+        );
+
+      }
+
+
+      const digest =
+        await res.json();
+
+
+      renderEmail(
+        digest
+      );
+
+    } catch (err) {
+
+      console.warn(err);
+
+      document.getElementById(
+        "email-frame"
+      ).innerHTML =
+        `
+          <div class="empty">
+            Failed to load this digest
+          </div>
+        `;
+
+    }
+
+  }
+
+
+  async function sendTestEmail() {
+
+    if (!currentDigestId) {
+
+      alert(
+        "No digest loaded to resend yet."
+      );
+
+      return;
+
+    }
+
+
+    const btn =
+      document.getElementById(
+        "send-test-btn"
+      );
+
+
+    const originalText =
+      btn.textContent;
+
+
+    btn.textContent =
+      "Sending…";
+
+    btn.disabled = true;
+
+
+    try {
+
+      /*
+       * No user_id.
+       */
+      const res =
+        await fetch(
+          `/api/digests/${encodeURIComponent(currentDigestId)}/resend`,
+          {
+            method: "POST"
+          }
+        );
+
+
+      const data =
+        await res.json();
+
+
+      if (res.status === 401) {
+
+        window.location.href =
+          "login.html";
+
+        return;
+
+      }
+
+
+      if (!res.ok) {
+
+        btn.textContent =
+          data.detail ||
+          "Failed to send";
+
+
+        setTimeout(
+          () => {
+
+            btn.textContent =
+              originalText;
+
+            btn.disabled =
+              false;
+
+          },
+          2500
+        );
+
+        return;
+
+      }
+
+
+      btn.textContent =
+        `Sent to ${data.sent_to} ✓`;
+
+
+      setTimeout(
+        () => {
+
+          btn.textContent =
+            originalText;
+
+          btn.disabled =
+            false;
+
+        },
+        2500
+      );
+
+    } catch (err) {
+
+      console.error(err);
+
+      btn.textContent =
+        "Send failed — is the server running?";
+
+
+      setTimeout(
+        () => {
+
+          btn.textContent =
+            originalText;
+
+          btn.disabled =
+            false;
+
+        },
+        2500
+      );
+
+    }
+
+  }
+
+
+  loadDigestList();
+
+</script>
+
+<script>
+  renderAuthChip("auth-chip");
+</script>
+
+</body>
+</html>

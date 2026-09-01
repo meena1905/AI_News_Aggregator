@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Dashboard — AI News Aggregator</title>
+<style>
+  :root {
+    --bg: #0a0a12;
+    --bg-panel: #111120;
+    --bg-sidebar: #0d0d18;
+    --purple-1: #4c1d95;
+    --purple-2: #7c3aed;
+    --purple-3: #a78bfa;
+    --purple-glow: rgba(124, 58, 237, 0.35);
+    --text-main: #f5f3ff;
+    --text-dim: #a1a1c2;
+    --text-faint: #6b6b8a;
+    --border: rgba(167, 139, 250, 0.15);
+    --green: #34d399;
+    --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', 'Segoe UI', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  .sidebar {
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 16px;
+    padding: 0 10px 28px;
+  }
+  .logo-mark {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--purple-2), var(--purple-1));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; box-shadow: 0 0 16px var(--purple-glow);
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px; border-radius: 9px;
+    font-size: 14px; color: var(--text-dim);
+    margin-bottom: 2px;
+  }
+  .nav-item:hover { background: rgba(124,58,237,0.08); color: var(--text-main); }
+  .nav-item.active {
+    background: linear-gradient(135deg, rgba(124,58,237,0.25), rgba(76,29,149,0.25));
+    color: var(--text-main);
+    border: 1px solid var(--border);
+  }
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 11px 14px;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+  .sidebar-footer a, .sidebar-footer button {
+    background: none; border: none; color: inherit; font: inherit; cursor: pointer; padding: 0;
+  }
+  .main { padding: 32px 40px; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .topbar h1 { font-family: var(--font-display); font-size: 24px; font-weight: 700; }
+  .topbar p { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+  .user-chip {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px; color: var(--text-dim);
+  }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple-2), var(--purple-1));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: white;
+  }
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px;
+  }
+  .stat-label { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
+  .stat-value { font-family: var(--font-display); font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .stat-value.green { color: var(--green); }
+  .stat-sub { font-size: 12px; color: var(--text-faint); }
+  .panel {
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+  }
+  .panel-head h3 { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--purple-2), var(--purple-1));
+    padding: 9px 18px; border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+  }
+  .btn-ghost {
+    border: 1px solid var(--border); padding: 6px 14px;
+    border-radius: 7px; font-size: 12px; font-weight: 600;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--text-faint);
+    padding: 14px 24px; font-weight: 600;
+  }
+  td { padding: 14px 24px; font-size: 13px; border-top: 1px solid var(--border); }
+  tr:hover td { background: rgba(124,58,237,0.04); }
+  .status-pill {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 999px;
+    background: rgba(52, 211, 153, 0.15); color: var(--green);
+  }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .main { padding: 20px; }
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background:
+      radial-gradient(ellipse 800px 500px at 12% -5%, rgba(124,58,237,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 700px 500px at 90% 105%, rgba(76,29,149,0.16) 0%, transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    letter-spacing: -0.005em;
+  }
+  h1, h2, h3, h4, .stat-value, .logo { letter-spacing: -0.02em; }
+  ::selection { background: rgba(124,58,237,0.35); color: #fff; }
+  nav {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(10,10,18,0.72);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .sidebar {
+    background: rgba(13,13,24,0.75) !important;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .panel, .stat-card, .feature-card, .article-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01)) , var(--bg-panel);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 24px 48px -24px rgba(0,0,0,0.65);
+    transition: transform 0.25s cubic-bezier(.2,.8,.2,1), border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .stat-card:hover, .article-card:hover, .feature-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(167,139,250,0.4);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 28px 56px -20px rgba(124,58,237,0.32);
+  }
+  .panel:hover { border-color: rgba(167,139,250,0.22); }
+  tr td { transition: background 0.15s ease; }
+  .btn-primary, .nav-cta {
+    position: relative;
+    transition: transform 0.2s cubic-bezier(.2,.8,.2,1), box-shadow 0.2s ease, filter 0.2s ease;
+  }
+  .btn-primary:hover, .nav-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px var(--purple-glow);
+    filter: brightness(1.08);
+  }
+  .btn-secondary, .btn-ghost, .filter-chip, .chip {
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+  }
+  .btn-secondary:hover, .btn-ghost:hover, .filter-chip:hover, .chip:hover {
+    border-color: rgba(167,139,250,0.5);
+    transform: translateY(-1px);
+  }
+  .nav-item { transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease; }
+  .nav-item:hover { transform: translateX(2px); }
+  .logo-mark, .step-icon, .avatar {
+    box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 0 24px var(--purple-glow);
+  }
+  .status-pill { box-shadow: 0 0 0 1px rgba(52,211,153,0.25) inset; }
+  .tag { box-shadow: 0 0 0 1px rgba(124,58,237,0.3) inset; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">AI News Aggregator</div>
+    <a href="dashboard.html" class="nav-item active">Dashboard</a>
+    <a href="digests.html" class="nav-item">Digests</a>
+    <a href="articles.html" class="nav-item">Articles</a>
+    <a href="preferences.html" class="nav-item">Preferences</a>
+    <a href="how-it-works.html" class="nav-item">How It Works</a>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Dashboard</h1>
+      </div>
+      <div class="user-chip" id="auth-chip"></div>
+    </div>
+    <div class="stat-grid" id="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Digests</div>
+        <div class="stat-value" id="stat-total-digests">—</div>
+        <div class="stat-sub">Sent so far</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Articles</div>
+        <div class="stat-value" id="stat-total-articles">—</div>
+        <div class="stat-sub">Summarized</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">This Month</div>
+        <div class="stat-value" id="stat-this-month">—</div>
+        <div class="stat-sub">Digests sent</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Success Rate</div>
+        <div class="stat-value green" id="stat-success-rate">—</div>
+        <div class="stat-sub">Delivery rate</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Recent Digests</h3>
+        <a href="digests.html" class="btn-primary">View All Digests</a>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Articles</th><th>Sent To</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody id="recent-digests-body">
+          <tr><td colspan="5" style="color:var(--text-faint);">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+<script src="auth.js"></script>
+<script>
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    window.location.href = "login.html";
+  }
+</script>
+<script>
+  async function loadDashboard() {
+    try {
+      const res = await fetch(`/api/dashboard?user_id=${encodeURIComponent(currentUser.id)}`);
+      if (!res.ok) throw new Error("API error");
+      const data = await res.json();
+      document.getElementById("stat-total-digests").textContent = data.total_digests;
+      document.getElementById("stat-total-articles").textContent = data.total_articles;
+      document.getElementById("stat-this-month").textContent = data.this_month;
+      document.getElementById("stat-success-rate").textContent = data.success_rate + "%";
+      const tbody = document.getElementById("recent-digests-body");
+      if (data.recent_digests.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-faint);">No digests sent yet</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.recent_digests.map(d => `
+        <tr>
+          <td>${d.date}</td>
+          <td>${d.articles}</td>
+          <td>${d.sent_to}</td>
+          <td><span class="status-pill">${d.status}</span></td>
+          <td><a href="digest-detail.html?id=${d.id}&user_id=${encodeURIComponent(currentUser.id)}" class="btn-ghost">View</a></td>
+        </tr>
+      `).join("");
+    } catch (err) {
+      console.warn("Falling back to sample data — API not reachable:", err);
+      document.getElementById("stat-total-digests").textContent = "32";
+      document.getElementById("stat-total-articles").textContent = "1,248";
+      document.getElementById("stat-this-month").textContent = "22";
+      document.getElementById("stat-success-rate").textContent = "100%";
+      document.getElementById("recent-digests-body").innerHTML = `
+        <tr><td colspan="5" style="color:var(--text-faint);">
+          Sample data — start the FastAPI server (uvicorn api.main:app) to see real digests
+        </td></tr>`;
+    }
+  }
+  loadDashboard();
+</script>
+<script>renderAuthChip("auth-chip");</script>
+</body>
+</html>

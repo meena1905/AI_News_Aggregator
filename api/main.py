@@ -1,273 +1,1046 @@
-import asyncio
-import asyncpg
-import httpx
 import json
 import os
-import uuid
-import subprocess
-from datetime import datetime
-from groq import AsyncGroq
-from dotenv import load_dotenv
+import time
+import bcrypt
+import secrets
+import httpx
+from datetime import datetime, timedelta
+from collections import defaultdict
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from fastapi import FastAPI
-from contextlib import asynccontextmanager
+from pydantic import BaseModel, EmailStr
+from utils.sentry import init_sentry
+from agents.workflow import run_pipeline
+from agents.emailer_agent import send_digest, SENDGRID_API_KEY, SENDGRID_FROM
+from auth.session import (
+    create_session,
+    set_session_cookie,
+    require_user,
+    clear_session,
+)
+from db.database import get_pool
+from db.queries import get_recent_digests
+IST_OFFSET = timedelta(hours=5, minutes=30)
+APP_BASE_URL = os.getenv(
+    "APP_BASE_URL",
+    "http://127.0.0.1:8000",
+)
+def _format_digest_date(dt: datetime) -> str:
+   
 
-load_dotenv(override=True)
+    dt_ist = dt + IST_OFFSET
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-GROQ_API_KEY   = os.getenv("GROQ_API_KEY")
-RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-RESEND_FROM    = "onboarding@resend.dev"
-client_groq    = AsyncGroq(api_key=GROQ_API_KEY)
+    hour_12 = dt_ist.hour % 12 or 12
+    am_pm = "AM" if dt_ist.hour < 12 else "PM"
 
-# ─── Scraper ─────────────────────────────────────────────
-async def run_scraper():
-    result = subprocess.run(
-        ["python", "agents/scraper_agent.py"],
-        capture_output=True,
-        cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        encoding="utf-8",
-        errors="ignore"
+    return (
+        f"{dt_ist.strftime('%b')} "
+        f"{dt_ist.day}, "
+        f"{dt_ist.year} · "
+        f"{hour_12}:{dt_ist.strftime('%M')} "
+        f"{am_pm} IST"
     )
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    with open(os.path.join(base_dir, "scraped_articles.json"), encoding="utf-8") as f:
-        articles = json.load(f)
-    print(f"✅ Scraper done → {len(articles)} articles")
-    return articles
+async def _send_reset_email(
+    to_email: str,
+    reset_link: str,
+) -> bool:
 
-# ─── Summarizer ──────────────────────────────────────────
-async def run_summarizer(articles):
-    summarized = []
-    for article in articles:
-        try:
-            prompt = f"""Analyze this tech article and respond ONLY with valid JSON.
-Title: {article['title']}
-Source: {article['source']}
-Return this JSON:
-{{
-  "summary": "3-4 sentence detailed summary",
-  "key_points": ["point 1", "point 2", "point 3"],
-  "sentiment": "positive",
-  "category": "llm",
-  "relevance_score": 0.8,
-  "why_it_matters": "one sentence",
-  "tags": ["tag1", "tag2", "tag3"]
-}}
-Only return JSON. No other text."""
+    html = f"""
+    <div style="
+        font-family:-apple-system,sans-serif;
+        max-width:480px;
+        margin:0 auto;
+        padding:32px;
+    ">
 
-            response = await client_groq.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-                max_tokens=500,
+      <h2 style="color:#4c1d95;">
+        Reset your password
+      </h2>
+
+      <p style="
+          color:#374151;
+          font-size:14px;
+          line-height:1.6;
+      ">
+        Click the button below to set a new password.
+        This link expires in 1 hour.
+      </p>
+
+      <a
+        href="{reset_link}"
+        style="
+          display:inline-block;
+          background:#7c3aed;
+          color:#fff;
+          padding:12px 24px;
+          border-radius:8px;
+          text-decoration:none;
+          font-weight:600;
+          margin-top:12px;
+        "
+      >
+        Reset Password
+      </a>
+
+      <p style="
+          color:#9ca3af;
+          font-size:12px;
+          margin-top:24px;
+      ">
+        If you didn't request this, you can safely ignore this email.
+      </p>
+
+    </div>
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+
+            response = await client.post(
+                "https://api.sendgrid.com/v3/mail/send",
+                headers={
+                    "Authorization": f"Bearer {SENDGRID_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "personalizations": [
+                        {
+                            "to": [
+                                {
+                                    "email": to_email
+                                }
+                            ]
+                        }
+                    ],
+                    "from": {
+                        "email": SENDGRID_FROM
+                    },
+                    "subject": "Reset your password",
+                    "content": [
+                        {
+                            "type": "text/html",
+                            "value": html,
+                        }
+                    ],
+                },
+                timeout=30.0,
             )
-            raw_text   = response.choices[0].message.content
-            json_match = raw_text.find("{")
-            json_end   = raw_text.rfind("}") + 1
-            if json_match != -1:
-                result = json.loads(raw_text[json_match:json_end])
-                article["summary"]         = result.get("summary", "")
-                article["key_points"]      = result.get("key_points", [])
-                article["sentiment"]       = result.get("sentiment", "neutral")
-                article["category"]        = result.get("category", "other")
-                article["relevance_score"] = result.get("relevance_score", 0.5)
-                summarized.append(article)
-        except Exception as e:
-            continue
-    print(f"✅ Summarizer done → {len(summarized)} articles")
-    return summarized
 
-# ─── Personalizer ────────────────────────────────────────
-async def run_personalizer(articles):
-    conn = await asyncpg.connect(DATABASE_URL, ssl="require")
-    users = await conn.fetch("SELECT * FROM users")
-    await conn.close()
-    personalized = {}
-    for user in users:
-        user = dict(user)
-        interests = user['interests']
-        if isinstance(interests, str):
-            interests = json.loads(interests)
-        interests_lower = [i.lower() for i in interests]
-        scored = []
-        for article in articles:
-            score = float(article.get('relevance_score') or 0.5)
-            for interest in interests_lower:
-                if interest in article['title'].lower():
-                    score += 0.3
-                if interest in (article.get('summary') or '').lower():
-                    score += 0.2
-            scored.append({**article, 'personal_score': score})
-        scored.sort(key=lambda x: x['personal_score'], reverse=True)
-        personalized[user['user_id']] = {
-            'user':     user,
-            'articles': scored[:10]
+            return response.status_code == 202
+
+    except Exception as e:
+
+        print(
+            f"❌ Failed to send reset email: {e}"
+        )
+
+        return False
+app = FastAPI(
+    title="AI News Aggregator"
+)
+init_sentry()
+_allowed_origins_env = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:8000,http://127.0.0.1:8000",
+)
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in _allowed_origins_env.split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+def check_rate_limit(
+    request: Request,
+    bucket: str,
+    max_attempts: int,
+    window_seconds: int,
+):
+    """
+    Raises 429 if this client IP exceeds the configured limit.
+    """
+
+    client_ip = (
+        request.client.host
+        if request.client
+        else "unknown"
+    )
+
+    key = f"{bucket}:{client_ip}"
+
+    now = time.time()
+
+    attempts = _rate_limit_store[key]
+    attempts[:] = [
+        timestamp
+        for timestamp in attempts
+        if now - timestamp < window_seconds
+    ]
+    if len(attempts) >= max_attempts:
+
+        raise HTTPException(
+            429,
+            "Too many attempts — try again in a few minutes",
+        )
+    attempts.append(now)
+@app.get("/api/dashboard")
+async def dashboard_stats(request: Request):
+    user_id = require_user(request)
+
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+
+        total_digests = await conn.fetchval(
+            """
+            SELECT COUNT(*)
+            FROM digests
+            WHERE user_id = $1
+            """,
+            user_id,
+        )
+
+        total_articles = await conn.fetchval(
+            """
+            SELECT COUNT(DISTINCT elem)
+            FROM digests d,
+                 jsonb_array_elements_text(d.article_ids) elem
+            WHERE d.user_id = $1
+            """,
+            user_id,
+        )
+        now_ist = (
+            datetime.utcnow()
+            + IST_OFFSET
+        )
+        month_start_ist = now_ist.replace(
+            day=1,
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+        month_start_utc = (
+            month_start_ist
+            - IST_OFFSET
+        )
+        this_month = await conn.fetchval(
+            """
+            SELECT COUNT(*)
+            FROM digests
+            WHERE sent_at >= $1
+              AND user_id = $2
+            """,
+            month_start_utc,
+            user_id,
+        )
+        sent_count = await conn.fetchval(
+            """
+            SELECT COUNT(*)
+            FROM digests
+            WHERE email_status = 'sent'
+              AND user_id = $1
+            """,
+            user_id,
+        )
+    success_rate = (
+        round(
+            (sent_count / total_digests) * 100
+        )
+        if total_digests
+        else 100
+    )
+    recent = await get_recent_digests(
+        limit=5,
+        user_id=user_id,
+    )
+    recent_out = [
+        {
+            "id": str(d["id"]),
+            "date": _format_digest_date(
+                d["sent_at"]
+            ),
+            "articles": len(d["articles"]),
+            "sent_to": d["user_email"],
+            "status": d["email_status"],
         }
-    print(f"✅ Personalizer done → {len(personalized)} users")
-    return personalized
+        for d in recent
+    ]
+    return {
+        "total_digests": total_digests,
+        "total_articles": total_articles,
+        "this_month": this_month,
+        "success_rate": success_rate,
+        "recent_digests": recent_out,
+    }
+@app.get("/api/digests")
+async def list_digests(
+    request: Request,
+    page: int = 1,
+    page_size: int = 15,
+    days: int | None = None,
+    status_filter: str | None = None,
+):
+    user_id = require_user(request)
 
-# ─── Emailer ─────────────────────────────────────────────
-async def run_emailer(personalized):
-    emails_sent = []
-    for user_id, digest in personalized.items():
-        user     = digest['user']
-        articles = digest['articles']
-        try:
-            date_str  = datetime.utcnow().strftime("%A, %B %d %Y")
-            name      = user.get("name", "there")
-            interests = user.get("interests", [])
-            if isinstance(interests, str):
-                interests = json.loads(interests)
-            interests_str = ", ".join(interests[:3])
-            cards_html    = ""
-            for i, article in enumerate(articles, 1):
-                key_points = article.get("key_points", [])
-                if isinstance(key_points, str):
-                    key_points = json.loads(key_points)
-                kp_html = "".join(
-                    f"<li style='margin:4px 0;color:#4b5563;font-size:13px;'>{p}</li>"
-                    for p in key_points[:3]
+    offset = (
+        page - 1
+    ) * page_size
+
+    pool = await get_pool()
+
+    params = [user_id]
+
+    where_clauses = [
+        "d.user_id = $1"
+    ]
+
+    if days is not None:
+
+        where_clauses.append(
+            f"d.sent_at >= NOW() - INTERVAL '{int(days)} days'"
+        )
+
+    if status_filter:
+
+        params.append(status_filter)
+
+        where_clauses.append(
+            f"d.email_status = ${len(params)}"
+        )
+
+    where_sql = (
+        f"WHERE {' AND '.join(where_clauses)}"
+    )
+
+    async with pool.acquire() as conn:
+
+        total = await conn.fetchval(
+            f"""
+            SELECT COUNT(*)
+            FROM digests d
+            {where_sql}
+            """,
+            *params,
+        )
+
+        rows = await conn.fetch(
+            f"""
+            SELECT
+                d.id,
+                d.sent_at,
+                d.article_ids,
+                d.email_status,
+                u.email AS user_email
+
+            FROM digests d
+
+            JOIN users u
+              ON u.user_id = d.user_id
+
+            {where_sql}
+
+            ORDER BY d.sent_at DESC
+
+            LIMIT ${len(params) + 1}
+            OFFSET ${len(params) + 2}
+            """,
+            *params,
+            page_size,
+            offset,
+        )
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "digests": [
+            {
+                "id": str(r["id"]),
+
+                "date": _format_digest_date(
+                    r["sent_at"]
+                ),
+
+                "articles": len(
+                    json.loads(r["article_ids"])
+                ),
+
+                "sent_to": r["user_email"],
+
+                "status": r["email_status"],
+            }
+
+            for r in rows
+        ],
+    }
+@app.get("/api/digests/{digest_id}")
+async def digest_detail(
+    digest_id: str,
+    request: Request,
+):
+
+    user_id = require_user(request)
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT
+                d.*,
+                u.name AS user_name,
+                u.email AS user_email
+
+            FROM digests d
+
+            JOIN users u
+              ON u.user_id = d.user_id
+
+            WHERE d.id = $1
+              AND d.user_id = $2
+            """,
+            digest_id,
+            user_id,
+        )
+        if not row:
+            raise HTTPException(
+                404,
+                "Digest not found",
+            )
+        article_ids = json.loads(
+            row["article_ids"]
+        )
+        articles = []
+        if article_ids:
+            articles = [
+                dict(a)
+                for a in await conn.fetch(
+                    """
+                    SELECT *
+                    FROM articles
+                    WHERE id = ANY($1::uuid[])
+                    """,
+                    article_ids,
                 )
-                cards_html += f"""
-                <div style="border:1px solid #e9d5ff;border-radius:12px;padding:20px;
-                            margin-bottom:16px;background:#faf5ff;">
-                    <div style="margin-bottom:10px;">
-                        <span style="background:#7c3aed;border-radius:50%;width:28px;
-                                     height:28px;display:inline-flex;align-items:center;
-                                     justify-content:center;font-weight:700;font-size:13px;
-                                     color:#ffffff;">#{i}</span>
-                        <span style="background:#7c3aed30;color:#7c3aed;border-radius:6px;
-                                     padding:2px 8px;font-size:11px;font-weight:600;
-                                     text-transform:uppercase;margin-left:8px;">
-                            {article.get('category','other')}
-                        </span>
-                    </div>
-                    <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;color:#4c1d95;">
-                        <a href="{article['url']}" style="color:#4c1d95;text-decoration:none;">
-                            {article['title'][:120]}
-                        </a>
-                    </h3>
-                    <p style="margin:0 0 12px;color:#6b21a8;font-size:14px;line-height:1.6;">
-                        {(article.get('summary') or '')[:300]}
-                    </p>
-                    <ul style="margin:0 0 12px;padding-left:16px;">{kp_html}</ul>
-                    <div style="text-align:right;">
-                        <a href="{article['url']}"
-                           style="background:#7c3aed;color:#ffffff;padding:8px 16px;
-                                  border-radius:8px;font-size:13px;font-weight:500;
-                                  text-decoration:none;">Read Article →</a>
-                    </div>
-                </div>"""
+            ]
 
-            email_html = f"""
-<!DOCTYPE html>
-<html>
-<body style="margin:0;padding:0;background:#f5f3ff;
-             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-<div style="max-width:640px;margin:32px auto;">
-    <div style="background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 100%);
-                border-radius:16px 16px 0 0;padding:32px;text-align:center;">
-        <div style="font-size:40px;margin-bottom:8px;">⚡</div>
-        <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;">
-            AI News Digest</h1>
-        <p style="margin:8px 0 0;color:#e9d5ff;font-size:14px;">
-            {date_str} · Powered by Llama3.2 + Groq</p>
-    </div>
-    <div style="background:#6d28d9;padding:12px 24px;text-align:center;">
-        <p style="margin:0;color:#ffffff;font-size:13px;">
-            🎯 Personalized for <strong>{name}</strong>
-            · Interests: <em>{interests_str}</em></p>
-    </div>
-    <div style="background:#f5f3ff;padding:24px;">
-        <p style="color:#4c1d95;font-size:15px;line-height:1.6;margin:0 0 20px;">
-            Good morning <strong>{name}</strong>!
-            Here are your top <strong>{len(articles)} AI/tech stories</strong>
-            for today. Estimated read time: <strong>5 minutes</strong>.</p>
-        {cards_html}
-    </div>
-    <div style="background:#4c1d95;border-radius:0 0 16px 16px;
-                padding:24px;text-align:center;">
-        <p style="margin:0;color:#e9d5ff;font-size:12px;line-height:1.8;">
-            AI News Aggregator · Built with LangGraph + Llama3.2 + Groq<br>
-            <a href="#" style="color:#c4b5fd;">Unsubscribe</a> ·
-            <a href="#" style="color:#c4b5fd;">Update Interests</a></p>
-    </div>
-</div>
-</body>
-</html>"""
+    return {
+        "id": str(row["id"]),
 
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://api.resend.com/emails",
-                    headers={
-                        "Authorization": f"Bearer {RESEND_API_KEY}",
-                        "Content-Type":  "application/json"
-                    },
-                    json={
-                        "from":    RESEND_FROM,
-                        "to":      [user["email"]],
-                        "subject": f"⚡ Your AI Digest — {date_str}",
-                        "html":    email_html,
-                    },
-                    timeout=30.0
+        "sent_at": row[
+            "sent_at"
+        ].isoformat(),
+
+        "status": row[
+            "email_status"
+        ],
+
+        "user_name": row[
+            "user_name"
+        ],
+
+        "user_email": row[
+            "user_email"
+        ],
+
+        "articles": articles,
+    }
+@app.post("/api/digests/{digest_id}/resend")
+async def resend_digest(
+    digest_id: str,
+    request: Request,
+):
+    user_id = require_user(request)
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT
+                article_ids,
+                user_id
+
+            FROM digests
+
+            WHERE id = $1
+              AND user_id = $2
+            """,
+            digest_id,
+            user_id,
+        )
+
+        if not row:
+
+            raise HTTPException(
+                404,
+                "Digest not found",
+            )
+
+        user_row = await conn.fetchrow(
+            """
+            SELECT *
+            FROM users
+            WHERE user_id = $1
+            """,
+            row["user_id"],
+        )
+
+        if not user_row:
+
+            raise HTTPException(
+                404,
+                "User for this digest no longer exists",
+            )
+
+        article_ids = json.loads(
+            row["article_ids"]
+        )
+
+        articles = []
+
+        if article_ids:
+
+            articles = [
+                dict(a)
+
+                for a in await conn.fetch(
+                    """
+                    SELECT *
+                    FROM articles
+                    WHERE id = ANY($1::uuid[])
+                    """,
+                    article_ids,
                 )
-                if response.status_code == 200:
-                    emails_sent.append(user["email"])
-                    print(f"✅ Email sent to {user['email']}!")
-        except Exception as e:
-            print(f"❌ Error: {e}")
-            continue
-    print(f"✅ Emailer done → {len(emails_sent)} emails sent!")
-    return emails_sent
+            ]
 
-# ─── Full Pipeline ───────────────────────────────────────
-async def run_full_pipeline():
-    print(f"\n🚀 Pipeline started at {datetime.utcnow().strftime('%H:%M:%S')}")
-    articles     = await run_scraper()
-    summarized   = await run_summarizer(articles)
-    personalized = await run_personalizer(summarized)
-    emails_sent  = await run_emailer(personalized)
-    print(f"🎉 Pipeline done! Emails sent: {len(emails_sent)}")
+    if not articles:
 
-# ─── FastAPI + Scheduler ─────────────────────────────────
+        raise HTTPException(
+            400,
+            "This digest has no articles to resend",
+        )
+
+    status = await send_digest(
+        dict(user_row),
+        articles,
+    )
+
+    if status != "sent":
+
+        raise HTTPException(
+            502,
+            "SendGrid rejected the email — "
+            "check your API key and verified sender in .env",
+        )
+
+    return {
+        "status": "sent",
+        "sent_to": user_row["email"],
+    }
+@app.get("/api/articles")
+async def list_articles(
+    source: str | None = None,
+    limit: int = 20,
+):
+    pool = await get_pool()
+    query = """
+        SELECT *
+        FROM articles
+    """
+    params = []
+    if source:
+        query += """
+            WHERE source = $1
+        """
+        params.append(source)
+
+    query += f"""
+        ORDER BY scraped_at DESC
+        LIMIT {limit}
+    """
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            query,
+            *params,
+        )
+
+    return {
+        "articles": [
+            dict(r)
+            for r in rows
+        ]
+    }
+@app.get("/api/users/me")
+async def current_user(
+    request: Request,
+):
+
+    user_id = require_user(request)
+
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+
+        row = await conn.fetchrow(
+            """
+            SELECT
+                user_id,
+                name,
+                email,
+                interests
+
+            FROM users
+
+            WHERE user_id = $1
+            """,
+            user_id,
+        )
+
+    if not row:
+
+        raise HTTPException(
+            404,
+            "User not found",
+        )
+
+    return dict(row)
+@app.get("/api/preferences")
+async def get_preferences(
+    request: Request,
+):
+
+    user_id = require_user(request)
+
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+
+        row = await conn.fetchrow(
+            """
+            SELECT *
+            FROM users
+            WHERE user_id = $1
+            """,
+            user_id,
+        )
+
+    if not row:
+
+        raise HTTPException(
+            404,
+            "User not found",
+        )
+
+    return dict(row)
+
+@app.patch("/api/preferences")
+async def update_preferences(
+    request: Request,
+    interests: list[str],
+):
+
+    user_id = require_user(request)
+
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+
+        result = await conn.execute(
+            """
+            UPDATE users
+            SET interests = $1
+            WHERE user_id = $2
+            """,
+            json.dumps(interests),
+            user_id,
+        )
+
+    if result == "UPDATE 0":
+
+        raise HTTPException(
+            404,
+            "User not found",
+        )
+
+    return {
+        "status": "saved",
+        "interests": interests,
+    }
+class SignupRequest(BaseModel):
+
+    name: str
+    email: EmailStr
+    password: str
+
+
+class LoginRequest(BaseModel):
+
+    email: EmailStr
+    password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+
+    token: str
+    password: str
+@app.post("/api/signup")
+async def signup(
+    req: SignupRequest,
+    request: Request,
+):
+
+    check_rate_limit(
+        request,
+        "signup",
+        max_attempts=5,
+        window_seconds=3600,
+    )
+
+    if len(req.password) < 8:
+
+        raise HTTPException(
+            400,
+            "Password must be at least 8 characters",
+        )
+
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+
+        existing = await conn.fetchrow(
+            """
+            SELECT user_id
+            FROM users
+            WHERE email = $1
+            """,
+            req.email,
+        )
+
+        if existing:
+
+            raise HTTPException(
+                409,
+                "An account with this email already exists",
+            )
+
+        password_hash = bcrypt.hashpw(
+            req.password.encode(),
+            bcrypt.gensalt(),
+        ).decode()
+
+        row = await conn.fetchrow(
+            """
+            INSERT INTO users
+                (
+                    name,
+                    email,
+                    interests,
+                    password_hash
+                )
+
+            VALUES
+                (
+                    $1,
+                    $2,
+                    '[]',
+                    $3
+                )
+
+            RETURNING
+                user_id,
+                name,
+                email,
+                interests
+            """,
+            req.name,
+            req.email,
+            password_hash,
+        )
+
+    return {
+        "user_id": str(row["user_id"]),
+        "name": row["name"],
+        "email": row["email"],
+    }
+@app.post("/api/login")
+async def login(
+    req: LoginRequest,
+    request: Request,
+    response: Response,
+):
+
+    check_rate_limit(
+        request,
+        "login",
+        max_attempts=10,
+        window_seconds=300,
+    )
+
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+
+        row = await conn.fetchrow(
+            """
+            SELECT
+                user_id,
+                name,
+                email,
+                password_hash
+
+            FROM users
+
+            WHERE email = $1
+            """,
+            req.email,
+        )
+
+    if not row or not row["password_hash"]:
+
+        raise HTTPException(
+            401,
+            "Invalid email or password",
+        )
+
+    if not bcrypt.checkpw(
+        req.password.encode(),
+        row["password_hash"].encode(),
+    ):
+
+        raise HTTPException(
+            401,
+            "Invalid email or password",
+        )
+    token = create_session(
+        str(row["user_id"])
+    )
+    set_session_cookie(
+        response,
+        token,
+    )
+    return {
+        "name": row["name"],
+        "email": row["email"],
+    }
+@app.post("/api/logout")
+async def logout(
+    request: Request,
+    response: Response,
+):
+    token = request.cookies.get("session_token")
+
+    clear_session(
+        response,
+        token,
+    )
+
+    return {
+        "message": "Logged out successfully"
+    }
+@app.post("/api/forgot-password")
+async def forgot_password(
+    req: ForgotPasswordRequest,
+    request: Request,
+):
+
+    check_rate_limit(
+        request,
+        "forgot_password",
+        max_attempts=3,
+        window_seconds=3600,
+    )
+
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+
+        user = await conn.fetchrow(
+            """
+            SELECT user_id
+            FROM users
+            WHERE email = $1
+            """,
+            req.email,
+        )
+
+        if user:
+
+            token = secrets.token_urlsafe(32)
+
+            expires = (
+                datetime.utcnow()
+                + timedelta(hours=1)
+            )
+
+            await conn.execute(
+                """
+                UPDATE users
+
+                SET
+                    reset_token = $1,
+                    reset_token_expires = $2
+
+                WHERE user_id = $3
+                """,
+                token,
+                expires,
+                user["user_id"],
+            )
+
+            reset_link = (
+                f"{APP_BASE_URL}"
+                f"/reset-password.html"
+                f"?token={token}"
+            )
+
+            await _send_reset_email(
+                req.email,
+                reset_link,
+            )
+
+    return {
+        "message":
+            "If an account exists for that email, "
+            "a reset link has been sent."
+    }
+@app.post("/api/reset-password")
+async def reset_password(
+    req: ResetPasswordRequest,
+):
+
+    if len(req.password) < 8:
+
+        raise HTTPException(
+            400,
+            "Password must be at least 8 characters",
+        )
+
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+
+        user = await conn.fetchrow(
+            """
+            SELECT
+                user_id,
+                reset_token_expires
+
+            FROM users
+
+            WHERE reset_token = $1
+            """,
+            req.token,
+        )
+
+        if (
+            not user
+            or user["reset_token_expires"]
+            < datetime.utcnow()
+        ):
+
+            raise HTTPException(
+                400,
+                "This reset link is invalid or has expired",
+            )
+
+        password_hash = bcrypt.hashpw(
+            req.password.encode(),
+            bcrypt.gensalt(),
+        ).decode()
+
+        await conn.execute(
+            """
+            UPDATE users
+
+            SET
+                password_hash = $1,
+                reset_token = NULL,
+                reset_token_expires = NULL
+
+            WHERE user_id = $2
+            """,
+            password_hash,
+            user["user_id"],
+        )
+
+    return {
+        "message":
+            "Password updated successfully"
+    }
+@app.post("/api/trigger")
+async def trigger_pipeline(
+    request: Request,
+):
+    user_id = require_user(request)
+
+    result = await run_pipeline(
+        user_id=user_id
+    )
+    return {
+        "emails_sent":
+            result.get(
+                "emails_sent",
+                []
+            )
+    }
+
+@app.get("/api/health")
+async def health():
+
+    return {
+        "status": "ok"
+    }
+
+_STATIC_DIR = "dashboard/static"
+
+
+if os.path.isdir(_STATIC_DIR):
+
+    app.mount(
+        "/",
+        StaticFiles(
+            directory=_STATIC_DIR,
+            html=True,
+        ),
+        name="frontend",
+    )
+
+else:
+
+    print(
+        f"⚠️ '{_STATIC_DIR}' not found — "
+        "frontend won't be served, API routes still work"
+    )
+
 scheduler = AsyncIOScheduler()
+@app.on_event("startup")
+async def start_scheduler():
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Start scheduler
-    # Runs at 7AM IST = 1:30AM UTC
+    if (
+        os.getenv(
+            "ENABLE_IN_APP_SCHEDULER",
+            "false",
+        ).lower()
+        != "true"
+    ):
+        return
+
     scheduler.add_job(
-        run_full_pipeline,
-        CronTrigger(hour=1, minute=30),
+        run_pipeline,
+        trigger=CronTrigger(
+            hour=1,
+            minute=30,
+        ),
         id="daily_digest",
         replace_existing=True,
     )
     scheduler.start()
-    print("⏰ Scheduler started!")
-    print("   Daily digest runs at 7:00 AM IST")
-    yield
-    scheduler.shutdown()
-
-app = FastAPI(
-    title="AI News Aggregator",
-    lifespan=lifespan
-)
-
-@app.get("/")
-async def home():
-    return {
-        "status":  "running",
-        "message": "AI News Aggregator is live!",
-        "time":    datetime.utcnow().isoformat()
-    }
-
-@app.post("/trigger")
-async def trigger_pipeline():
-    print("Manual trigger!")
-    asyncio.create_task(run_full_pipeline())
-    return {"status": "Pipeline started!"}
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}

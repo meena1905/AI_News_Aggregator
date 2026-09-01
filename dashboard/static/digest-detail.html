@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Digest Detail — AI News Aggregator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a12; --bg-panel: #111120;
+    --purple-1: #4c1d95; --purple-2: #7c3aed; --purple-3: #a78bfa;
+    --purple-glow: rgba(124, 58, 237, 0.35);
+    --text-main: #f5f3ff; --text-dim: #a1a1c2; --text-faint: #6b6b8a;
+    --border: rgba(167, 139, 250, 0.15); --green: #34d399; --red: #f87171;
+    --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', 'Segoe UI', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background:
+      radial-gradient(ellipse 800px 500px at 12% -5%, rgba(124,58,237,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 700px 500px at 90% 105%, rgba(76,29,149,0.16) 0%, transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--text-main); font-family: var(--font-body); -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  h1,h2,h3,h4 { letter-spacing: -0.02em; }
+  nav {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(10,10,18,0.72);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    padding: 18px 40px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--text-faint);
+  }
+  nav a:hover { color: var(--text-main); }
+  nav .current { color: var(--text-main); font-weight: 600; }
+  .main { max-width: 1100px; margin: 0 auto; padding: 32px 40px; }
+  .top-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+  .top-row h1 { font-family: var(--font-display); font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .top-row .subtitle { font-size: 13px; color: var(--text-dim); display: flex; align-items: center; gap: 10px; }
+  .status-pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+  .status-pill.sent { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+  .status-pill.failed { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+  .actions { display: flex; gap: 10px; }
+  .btn-ghost {
+    border: 1px solid var(--border); background: rgba(255,255,255,0.02); padding: 10px 18px;
+    border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--text-dim);
+    transition: border-color 0.2s ease, transform 0.15s ease;
+  }
+  .btn-ghost:hover { border-color: var(--purple-3); transform: translateY(-1px); }
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01)), var(--bg-panel);
+    border: 1px solid var(--border); border-radius: 14px; padding: 18px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
+  }
+  .stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); margin-bottom: 8px; }
+  .stat-card .value { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+  .preview-panel {
+    background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01)), var(--bg-panel);
+    border: 1px solid var(--border); border-radius: 16px; padding: 28px;
+  }
+  .preview-panel h3 { font-family: var(--font-display); font-size: 16px; margin-bottom: 20px; }
+  .article-row {
+    border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 14px;
+    background: rgba(124,58,237,0.04);
+  }
+  .article-row .tag {
+    display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 6px; background: rgba(124,58,237,0.2); color: var(--purple-3);
+    margin-bottom: 10px;
+  }
+  .article-row h4 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .article-row p { font-size: 13px; color: var(--text-dim); line-height: 1.6; margin-bottom: 10px; }
+  .article-row .read-link { font-size: 12px; font-weight: 600; color: var(--purple-3); }
+  .empty { color: var(--text-faint); font-size: 13px; padding: 40px 0; text-align: center; }
+  @media (max-width: 900px) {
+    .main { padding: 20px; } nav { padding: 14px 20px; }
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<nav>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <a href="dashboard.html">Dashboard</a> <span>›</span>
+    <a href="digests.html">Digests</a> <span>›</span>
+    <span class="current" id="breadcrumb-date">Loading…</span>
+  </div>
+  <div id="auth-chip"></div>
+</nav>
+<div class="main">
+  <div class="top-row">
+    <div>
+      <h1>AI News Digest</h1>
+      <div class="subtitle">
+        <span id="digest-date">—</span>
+        <span class="status-pill" id="status-pill">—</span>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn-ghost" onclick="alert('Download not wired yet — would export this digest\\'s HTML')">Download HTML</button>
+      <button class="btn-ghost" onclick="alert('Resend not wired yet — would call POST /api/trigger for this user')">Resend</button>
+    </div>
+  </div>
+  <div class="stat-row">
+    <div class="stat-card"><div class="label">Articles</div><div class="value" id="stat-articles">—</div></div>
+    <div class="stat-card"><div class="label">Sent To</div><div class="value" id="stat-sent-to">—</div></div>
+    <div class="stat-card"><div class="label">Recipient</div><div class="value" id="stat-recipient">—</div></div>
+    <div class="stat-card"><div class="label">Status</div><div class="value" id="stat-status">—</div></div>
+  </div>
+  <div class="preview-panel">
+    <h3>Digest Contents</h3>
+    <div id="article-list"><div class="empty">Loading…</div></div>
+  </div>
+</div>
+<script src="auth.js"></script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const digestId = params.get("id");
+  const digestUserId = params.get("user_id") ||
+    ((typeof getCurrentUser === "function" && getCurrentUser()) ? getCurrentUser().id : null);
+  async function loadDigest() {
+    if (!digestId || !digestUserId) {
+      renderSample();
+      return;
+    }
+    try {
+      const res = await fetch(`/api/digests/${digestId}?user_id=${encodeURIComponent(digestUserId)}`);
+      if (!res.ok) throw new Error("API error");
+      const d = await res.json();
+      const dateObj = new Date(d.sent_at);
+      const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+        " · " + dateObj.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      document.getElementById("breadcrumb-date").textContent = dateStr;
+      document.getElementById("digest-date").textContent = dateStr;
+      document.getElementById("stat-articles").textContent = d.articles.length;
+      document.getElementById("stat-sent-to").textContent = d.user_name || "—";
+      document.getElementById("stat-recipient").textContent = d.user_email || "—";
+      document.getElementById("stat-status").textContent = d.status;
+      const pill = document.getElementById("status-pill");
+      pill.textContent = d.status;
+      pill.className = "status-pill " + (d.status === "sent" ? "sent" : "failed");
+      const list = document.getElementById("article-list");
+      if (d.articles.length === 0) {
+        list.innerHTML = `<div class="empty">No articles recorded for this digest</div>`;
+        return;
+      }
+      list.innerHTML = d.articles.map(a => {
+        let keyPoints = a.key_points;
+        if (typeof keyPoints === "string") { try { keyPoints = JSON.parse(keyPoints); } catch { keyPoints = []; } }
+        return `
+        <div class="article-row">
+          <span class="tag">${a.category || "other"}</span>
+          <h4>${a.title}</h4>
+          <p>${a.summary || ""}</p>
+          <a href="${a.url}" target="_blank" class="read-link">Read Article →</a>
+        </div>`;
+      }).join("");
+    } catch (err) {
+      console.warn("Falling back to sample data — API not reachable or invalid id:", err);
+      renderSample();
+    }
+  }
+  function renderSample() {
+    document.getElementById("breadcrumb-date").textContent = "Aug 11, 2025";
+    document.getElementById("digest-date").textContent = "Aug 11, 2025 · 7:00 AM";
+    document.getElementById("stat-articles").textContent = "25";
+    document.getElementById("stat-sent-to").textContent = "Meenakshi";
+    document.getElementById("stat-recipient").textContent = "meena@example.com";
+    document.getElementById("stat-status").textContent = "sent";
+    const pill = document.getElementById("status-pill");
+    pill.textContent = "sent"; pill.className = "status-pill sent";
+    document.getElementById("article-list").innerHTML = `
+      <div class="empty">
+        Sample view — open this page with ?id=&lt;digest-id&gt; from the Digests
+        or Dashboard page, with the FastAPI server running, to see a real digest.
+      </div>`;
+  }
+  loadDigest();
+</script>
+<script>renderAuthChip("auth-chip");</script>
+</body>
+</html>

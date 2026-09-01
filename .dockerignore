@@ -1,0 +1,11 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+scraped_articles.json
+node_modules/
+.git/
+.gitignore
+*.md
+articles.db

@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Preferences — AI News Aggregator</title>
+<style>
+  :root {
+    --bg: #0a0a12; --bg-panel: #111120; --bg-sidebar: #0d0d18;
+    --purple-1: #4c1d95; --purple-2: #7c3aed; --purple-3: #a78bfa;
+    --purple-glow: rgba(124, 58, 237, 0.35);
+    --text-main: #f5f3ff; --text-dim: #a1a1c2; --text-faint: #6b6b8a;
+    --border: rgba(167, 139, 250, 0.15); --green: #34d399;
+    --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', 'Segoe UI', sans-serif;
+  }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 16px;
+    padding: 0 10px 28px;
+  }
+
+  .logo-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--purple-2), var(--purple-1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 0 16px var(--purple-glow);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 9px;
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+  }
+
+  .nav-item:hover {
+    background: rgba(124,58,237,0.08);
+    color: var(--text-main);
+  }
+
+  .nav-item.active {
+    background: linear-gradient(
+      135deg,
+      rgba(124,58,237,0.25),
+      rgba(76,29,149,0.25)
+    );
+    color: var(--text-main);
+    border: 1px solid var(--border);
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 11px 14px;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+
+  .main {
+    padding: 32px 40px;
+    max-width: 720px;
+  }
+
+  .topbar {
+    margin-bottom: 28px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .topbar h1 {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .topbar p {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .greeting-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--purple-3);
+    margin-bottom: 6px;
+  }
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .panel h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .panel .hint {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 18px;
+  }
+
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .chip {
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-dim);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .chip.selected {
+    background: var(--purple-2);
+    border-color: var(--purple-2);
+    color: white;
+    font-weight: 600;
+  }
+
+  .add-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .add-row input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text-main);
+  }
+
+  .add-row input::placeholder {
+    color: var(--text-faint);
+  }
+
+  .add-row button {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-size: 13px;
+    color: var(--text-main);
+  }
+
+  .save-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .save-row-right {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(
+      135deg,
+      var(--purple-2),
+      var(--purple-1)
+    );
+    padding: 11px 24px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    color: white;
+  }
+
+  .btn-ghost {
+    border: 1px solid var(--border);
+    background: transparent;
+    padding: 11px 24px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+  }
+
+  .btn-trigger {
+    background: linear-gradient(135deg, #f472b6, #7c3aed);
+    padding: 11px 22px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-trigger:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  @media (max-width: 900px) {
+    .app {
+      grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+      display: none;
+    }
+
+    .main {
+      padding: 20px;
+    }
+
+    .field-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .save-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .save-row-right {
+      justify-content: flex-end;
+    }
+  }
+
+  /* ---------- Premium refinements ---------- */
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background:
+      radial-gradient(
+        ellipse 800px 500px at 12% -5%,
+        rgba(124,58,237,0.14) 0%,
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 700px 500px at 90% 105%,
+        rgba(76,29,149,0.16) 0%,
+        transparent 55%
+      ),
+      var(--bg);
+    background-attachment: fixed;
+    letter-spacing: -0.005em;
+  }
+
+  h1, h2, h3, h4, .stat-value, .logo {
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: rgba(124,58,237,0.35);
+    color: #fff;
+  }
+
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(10,10,18,0.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .sidebar {
+    background: rgba(13,13,24,0.75) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .panel, .stat-card, .feature-card, .article-card {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255,255,255,0.035),
+        rgba(255,255,255,0.01)
+      ),
+      var(--bg-panel);
+
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.05) inset,
+      0 24px 48px -24px rgba(0,0,0,0.65);
+
+    transition:
+      transform 0.25s cubic-bezier(.2,.8,.2,1),
+      border-color 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+
+  .stat-card:hover,
+  .article-card:hover,
+  .feature-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(167,139,250,0.4);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.06) inset,
+      0 28px 56px -20px rgba(124,58,237,0.32);
+  }
+
+  .panel:hover {
+    border-color: rgba(167,139,250,0.22);
+  }
+
+  tr td {
+    transition: background 0.15s ease;
+  }
+
+  .btn-primary,
+  .nav-cta {
+    position: relative;
+    transition:
+      transform 0.2s cubic-bezier(.2,.8,.2,1),
+      box-shadow 0.2s ease,
+      filter 0.2s ease;
+  }
+
+  .btn-primary:hover,
+  .nav-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px var(--purple-glow);
+    filter: brightness(1.08);
+  }
+
+  .btn-secondary,
+  .btn-ghost,
+  .filter-chip,
+  .chip {
+    transition:
+      border-color 0.2s ease,
+      background 0.2s ease,
+      transform 0.15s ease;
+  }
+
+  .btn-secondary:hover,
+  .btn-ghost:hover,
+  .filter-chip:hover,
+  .chip:hover {
+    border-color: rgba(167,139,250,0.5);
+    transform: translateY(-1px);
+  }
+
+  .btn-trigger:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(244,114,182,0.35);
+  }
+
+  .nav-item {
+    transition:
+      background 0.2s ease,
+      color 0.2s ease,
+      transform 0.15s ease;
+  }
+
+  .nav-item:hover {
+    transform: translateX(2px);
+  }
+
+  .logo-mark,
+  .step-icon,
+  .avatar {
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.15) inset,
+      0 0 24px var(--purple-glow);
+  }
+
+  .status-pill {
+    box-shadow:
+      0 0 0 1px rgba(52,211,153,0.25) inset;
+  }
+
+  .tag {
+    box-shadow:
+      0 0 0 1px rgba(124,58,237,0.3) inset;
+  }
+
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+
+    <div class="logo">
+      AI News Aggregator
+    </div>
+
+    <a href="dashboard.html" class="nav-item">
+      Dashboard
+    </a>
+
+    <a href="digests.html" class="nav-item">
+      Digests
+    </a>
+
+    <a href="articles.html" class="nav-item">
+      Articles
+    </a>
+
+    <a href="preferences.html" class="nav-item active">
+      Preferences
+    </a>
+
+    <a href="how-it-works.html" class="nav-item">
+      How It Works
+    </a>
+
+  </aside>
+
+
+  <main class="main">
+
+    <div class="topbar">
+
+      <div>
+
+        <div
+          class="greeting-eyebrow"
+          id="greeting-eyebrow"
+        ></div>
+
+        <h1>
+          Preferences
+        </h1>
+
+        <p id="preferences-subtitle">
+          Customize your news digest
+        </p>
+
+      </div>
+
+      <div id="auth-chip"></div>
+
+    </div>
+
+
+    <div
+      class="panel"
+      id="welcome-banner"
+      style="
+        display:none;
+        border-color:rgba(124,58,237,0.4);
+        background:linear-gradient(
+          135deg,
+          rgba(124,58,237,0.12),
+          rgba(76,29,149,0.08)
+        );
+      "
+    >
+
+      <h3>
+        🎉 Welcome to AI News Aggregator!
+      </h3>
+
+      <div
+        class="hint"
+        style="margin-bottom:0;"
+      >
+        Pick a few topics below, then hit
+        <strong>"Send My Digest Now"</strong>
+        to generate your first personalized digest.
+      </div>
+
+    </div>
+
+
+    <div class="panel">
+
+      <h3>
+        Your Interests
+      </h3>
+
+      <div class="hint">
+        Select topics you care about — articles are ranked against these
+      </div>
+
+      <div
+        class="chip-row"
+        id="interest-chips"
+      >
+
+        <span
+          style="
+            color:var(--text-faint);
+            font-size:13px;
+          "
+        >
+          Loading…
+        </span>
+
+      </div>
+
+      <div class="add-row">
+
+        <input
+          type="text"
+          id="custom-interest-input"
+          placeholder="e.g., MLOps, Computer Vision..."
+        />
+
+        <button id="add-interest-btn">
+          Add
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div class="panel">
+
+      <h3>
+        Delivery Settings
+      </h3>
+
+      <div class="field-grid">
+
+        <div class="field">
+
+          <label>
+            Delivery Time
+          </label>
+
+          <select>
+
+            <option>
+              7:00 AM IST
+            </option>
+
+            <option>
+              8:00 AM IST
+            </option>
+
+            <option>
+              9:00 AM IST
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="field">
+
+          <label>
+            Frequency
+          </label>
+
+          <select>
+
+            <option>
+              Daily
+            </option>
+
+            <option>
+              Weekdays only
+            </option>
+
+            <option>
+              Weekly digest
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+    </div>
+    <div class="save-row">
+
+      <button
+        class="btn-trigger"
+        id="trigger-btn"
+      >
+        ✨ Send My Digest Now
+      </button>
+
+
+      <div class="save-row-right">
+
+        <button
+          class="btn-ghost"
+          onclick="location.reload()"
+        >
+          Cancel
+        </button>
+
+        <button
+          class="btn-primary"
+          id="save-btn"
+        >
+          Save Changes
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div
+      class="panel"
+      id="digest-ready-banner"
+      style="
+        display:none;
+        margin-top:16px;
+        border-color:rgba(52,211,153,0.4);
+      "
+    >
+
+      <h3 style="color:var(--green);">
+        ✓ Your digest is ready
+      </h3>
+
+      <div
+        class="hint"
+        style="margin-bottom:14px;"
+      >
+        Email delivery is limited in test mode — Resend's sandbox sender only
+        guarantees delivery to the developer's own verified address. Your digest
+        was generated and saved either way, so you can always view it here.
+      </div>
+
+      <a
+        class="btn-primary"
+        id="digest-ready-link"
+        href="#"
+        style="display:inline-block;"
+      >
+        View My Digest →
+      </a>
+
+    </div>
+
+  </main>
+
+</div>
+
+
+<script src="auth.js"></script>
+
+
+<script>
+
+  let currentUser = null;
+  let currentUserId = null;
+
+
+  async function initializeAuthentication() {
+
+    currentUser =
+      await getCurrentUser();
+
+    if (!currentUser) {
+
+      window.location.href =
+        "login.html";
+
+      return false;
+    }
+
+    currentUserId =
+      currentUser.user_id;
+
+    return true;
+  }
+
+
+  const KNOWN_INTERESTS = [
+    "AI",
+    "LLM",
+    "Machine Learning",
+    "Data Science",
+    "NLP",
+    "Robotics",
+    "Tech",
+    "Startups",
+    "Open Source",
+    "Cybersecurity",
+    "Cloud",
+    "Web Dev",
+  ];
+
+
+  let selectedInterests = [];
+
+
+  function renderGreeting() {
+
+    const hour =
+      new Date().getHours();
+
+    const timeGreeting =
+      hour < 12
+        ? "Good morning"
+        : hour < 17
+          ? "Good afternoon"
+          : "Good evening";
+
+
+    const name =
+      currentUser
+        ? currentUser.name
+        : null;
+
+
+    document
+      .getElementById(
+        "greeting-eyebrow"
+      )
+      .textContent =
+        name
+          ? `${timeGreeting}, ${name}!`
+          : `${timeGreeting}!`;
+  }
+
+
+  if (
+    new URLSearchParams(
+      window.location.search
+    ).get("welcome") === "1"
+  ) {
+
+    document
+      .getElementById(
+        "welcome-banner"
+      )
+      .style.display =
+        "block";
+
+
+    document
+      .getElementById(
+        "preferences-subtitle"
+      )
+      .textContent =
+        "One last step — tell us what you're interested in";
+  }
+
+
+  function renderChips() {
+
+    const container =
+      document.getElementById(
+        "interest-chips"
+      );
+
+
+    const allChips =
+      [
+        ...new Set(
+          [
+            ...KNOWN_INTERESTS,
+            ...selectedInterests
+          ]
+        )
+      ];
+
+
+    container.innerHTML =
+      allChips
+        .map(label => {
+
+          const isSelected =
+            selectedInterests.includes(
+              label
+            );
+
+
+          return `
+            <button
+              class="chip ${isSelected ? "selected" : ""}"
+              data-label="${label}"
+            >
+              ${label}${isSelected ? " ✓" : ""}
+            </button>
+          `;
+
+        })
+        .join("");
+
+
+    container
+      .querySelectorAll(".chip")
+      .forEach(chip => {
+
+        chip.addEventListener(
+          "click",
+          () => {
+
+            const label =
+              chip.dataset.label;
+
+
+            if (
+              selectedInterests.includes(
+                label
+              )
+            ) {
+
+              selectedInterests =
+                selectedInterests.filter(
+                  interest =>
+                    interest !== label
+                );
+
+            } else {
+
+              selectedInterests.push(
+                label
+              );
+
+            }
+
+
+            renderChips();
+
+          }
+        );
+
+      });
+  }
+
+
+  async function loadPreferences() {
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/preferences",
+          {
+            method: "GET",
+            credentials: "include"
+          }
+        );
+
+
+      if (
+        response.status === 401
+      ) {
+
+        window.location.href =
+          "login.html";
+
+        return;
+      }
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          "Failed to load preferences"
+        );
+      }
+
+
+      const user =
+        await response.json();
+
+
+      currentUserId =
+        user.user_id;
+
+
+      let interests =
+        user.interests;
+
+
+      if (
+        typeof interests === "string"
+      ) {
+
+        try {
+
+          interests =
+            JSON.parse(
+              interests
+            );
+
+        } catch {
+
+          interests = [];
+
+        }
+
+      }
+
+
+      selectedInterests =
+        interests || [];
+
+
+      renderChips();
+
+
+    } catch (error) {
+
+      console.error(
+        "Failed to load preferences:",
+        error
+      );
+
+
+      selectedInterests =
+        [];
+
+
+      renderChips();
+
+
+      const grid =
+        document.getElementById(
+          "interest-chips"
+        );
+
+
+      const notice =
+        document.createElement(
+          "div"
+        );
+
+
+      notice.className =
+        "hint";
+
+
+      notice.style.color =
+        "var(--red, #f87171)";
+
+
+      notice.textContent =
+        "Couldn't load your saved interests — check that the server is running and try refreshing.";
+
+
+      grid.parentElement?.insertBefore(
+        notice,
+        grid
+      );
+    }
+  }
+
+
+  document
+    .getElementById(
+      "add-interest-btn"
+    )
+    .addEventListener(
+      "click",
+      () => {
+
+        const input =
+          document.getElementById(
+            "custom-interest-input"
+          );
+
+
+        const value =
+          input.value.trim();
+
+
+        if (
+          value &&
+          !selectedInterests.includes(
+            value
+          )
+        ) {
+
+          selectedInterests.push(
+            value
+          );
+
+
+          renderChips();
+
+
+          input.value = "";
+
+        }
+
+      }
+    );
+
+
+  document
+    .getElementById(
+      "save-btn"
+    )
+    .addEventListener(
+      "click",
+      async () => {
+
+        const btn =
+          document.getElementById(
+            "save-btn"
+          );
+
+
+        if (!currentUserId) {
+
+          btn.textContent =
+            "No user loaded";
+
+          return;
+        }
+
+
+        btn.textContent =
+          "Saving…";
+
+
+        try {
+
+          const response =
+            await fetch(
+              "/api/preferences",
+              {
+                method: "PATCH",
+
+                credentials:
+                  "include",
+
+                headers: {
+                  "Content-Type":
+                    "application/json"
+                },
+
+                body:
+                  JSON.stringify(
+                    selectedInterests
+                  )
+              }
+            );
+
+
+          if (
+            response.status === 401
+          ) {
+
+            window.location.href =
+              "login.html";
+
+            return;
+          }
+
+
+          if (!response.ok) {
+
+            const errorData =
+              await response
+                .json()
+                .catch(
+                  () => ({})
+                );
+
+
+            throw new Error(
+              errorData.detail ||
+              "Save failed"
+            );
+          }
+
+
+          btn.textContent =
+            "Saved ✓";
+
+
+          setTimeout(
+            () => {
+
+              btn.textContent =
+                "Save Changes";
+
+            },
+            1500
+          );
+
+
+        } catch (error) {
+
+          console.error(
+            error
+          );
+
+
+          btn.textContent =
+            "Save failed — is the API running?";
+
+
+          setTimeout(
+            () => {
+
+              btn.textContent =
+                "Save Changes";
+
+            },
+            2500
+          );
+
+        }
+
+      }
+    );
+
+
+  document
+    .getElementById(
+      "trigger-btn"
+    )
+    .addEventListener(
+      "click",
+      async () => {
+
+        const btn =
+          document.getElementById(
+            "trigger-btn"
+          );
+
+
+        const originalText =
+          btn.textContent;
+
+
+        const banner =
+          document.getElementById(
+            "digest-ready-banner"
+          );
+
+
+        banner.style.display =
+          "none";
+
+
+        btn.disabled =
+          true;
+
+
+        btn.textContent =
+          "Generating… this can take up to a minute";
+
+
+        try {
+
+          const response =
+            await fetch(
+              "/api/trigger",
+              {
+                method: "POST",
+                credentials: "include"
+              }
+            );
+
+
+          if (
+            response.status === 401
+          ) {
+
+            window.location.href =
+              "login.html";
+
+            return;
+          }
+
+
+          const data =
+            await response
+              .json()
+              .catch(
+                () => ({})
+              );
+
+
+          if (!response.ok) {
+
+            btn.textContent =
+              data.detail ||
+              "Failed to generate — try again";
+
+
+            setTimeout(
+              () => {
+
+                btn.textContent =
+                  originalText;
+
+                btn.disabled =
+                  false;
+
+              },
+              3000
+            );
+
+            return;
+          }
+
+
+          let latestDigestId =
+            null;
+
+
+          try {
+
+            const dashResponse =
+              await fetch(
+                "/api/dashboard",
+                {
+                  method: "GET",
+                  credentials: "include"
+                }
+              );
+
+
+            if (
+              dashResponse.status === 401
+            ) {
+
+              window.location.href =
+                "login.html";
+
+              return;
+            }
+
+
+            if (
+              dashResponse.ok
+            ) {
+
+              const dashData =
+                await dashResponse.json();
+
+
+              latestDigestId =
+                (
+                  dashData.recent_digests ||
+                  []
+                )[0]?.id || null;
+
+            }
+
+          } catch (error) {
+
+            console.warn(
+              "Could not load latest digest:",
+              error
+            );
+
+          }
+
+
+          if (
+            latestDigestId
+          ) {
+
+            btn.textContent =
+              "✓ Digest ready";
+
+
+            document
+              .getElementById(
+                "digest-ready-link"
+              )
+              .href =
+                `email-preview.html?id=${encodeURIComponent(
+                  latestDigestId
+                )}`;
+
+
+            banner.style.display =
+              "block";
+
+
+            banner.scrollIntoView({
+              behavior: "smooth",
+              block: "nearest"
+            });
+
+          } else {
+
+            btn.textContent =
+              "Done — but nothing was generated for your account";
+
+          }
+
+
+          setTimeout(
+            () => {
+
+              btn.textContent =
+                originalText;
+
+              btn.disabled =
+                false;
+
+            },
+            4000
+          );
+
+
+        } catch (error) {
+
+          console.error(
+            error
+          );
+
+
+          btn.textContent =
+            "Failed — is the server running?";
+
+
+          setTimeout(
+            () => {
+
+              btn.textContent =
+                originalText;
+
+              btn.disabled =
+                false;
+
+            },
+            3000
+          );
+
+        }
+
+      }
+    );
+
+
+  async function initializePreferences() {
+
+    const authenticated =
+      await initializeAuthentication();
+
+
+    if (!authenticated) {
+      return;
+    }
+
+
+    renderGreeting();
+
+
+    await loadPreferences();
+
+  }
+
+
+  initializePreferences();
+
+</script>
+
+
+<script>
+  renderAuthChip("auth-chip");
+</script>
+
+</body>
+</html>
