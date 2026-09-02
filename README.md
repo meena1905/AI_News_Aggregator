@@ -43,7 +43,6 @@ Clone the repository and install dependencies:
 git clone https://github.com/meena1905/AI_News_Aggregator.git
 cd AI_News_Aggregator
 pip install -r requirements.txt
-playwright install chromium
 ```
 
 Add the required environment variables (e.g. in a `.env` file):
