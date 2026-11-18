@@ -128,6 +128,8 @@ async def _send_reset_email(
                 timeout=30.0,
             )
 
+            if response.status_code != 202:
+                print(f"SendGrid error {response.status_code}: {response.text}")
             return response.status_code == 202
 
     except Exception as e:
