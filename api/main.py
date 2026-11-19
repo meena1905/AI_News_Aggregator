@@ -14,7 +14,7 @@ from apscheduler.triggers.cron import CronTrigger
 from pydantic import BaseModel, EmailStr
 from utils.sentry import init_sentry
 from agents.workflow import run_pipeline
-from agents.emailer_agent import send_digest, SENDGRID_API_KEY, SENDGRID_FROM
+from agents.emailer_agent import send_digest, BREVO_API_KEY, BREVO_FROM
 from auth.session import (
     create_session,
     set_session_cookie,

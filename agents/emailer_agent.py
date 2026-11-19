@@ -5,14 +5,14 @@ from datetime import datetime
 from dotenv import load_dotenv
 from db.queries import save_digest
 load_dotenv(override=True)
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-SENDGRID_FROM = os.getenv("SENDGRID_FROM")
-if not SENDGRID_API_KEY or not SENDGRID_FROM:
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+BREVO_FROM = os.getenv("BREVO_FROM")
+
+if not BREVO_API_KEY or not BREVO_FROM:
     print(
-        "SENDGRID_API_KEY and/or SENDGRID_FROM missing from .env — "
-        "email sending will fail until both are set. SENDGRID_FROM must "
-        "be the exact address you verified in SendGrid's Single Sender "
-        "Verification."
+        "BREVO_API_KEY and/or BREVO_FROM missing from .env. "
+        "Email sending will fail until both are set. BREVO_FROM must "
+        "be the exact sender address you verified in Brevo."
     )
 def _render_article_card(article: dict, index: int) -> str:
     key_points = article.get("key_points", [])
@@ -110,39 +110,23 @@ async def send_digest(user: dict, articles: list[dict]) -> str:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "https://api.sendgrid.com/v3/mail/send",
+                "https://api.brevo.com/v3/smtp/email",
                 headers={
-                    "Authorization": f"Bearer {SENDGRID_API_KEY}",
+                    "api-key": BREVO_API_KEY,
                     "Content-Type": "application/json",
                 },
                 json={
-                    "personalizations": [{"to": [{"email": user["email"]}]}],
-                    "from": {"email": SENDGRID_FROM},
+                    "sender": {"email": BREVO_FROM, "name": "AI News Aggregator"},
+                    "to": [{"email": user["email"]}],
                     "subject": subject,
-                    "content": [{"type": "text/html", "value": html}],
+                    "htmlContent": html,
                 },
                 timeout=30.0,
             )
-            if response.status_code == 202:
+            if response.status_code in (200, 201):
                 status = "sent"
                 print(f"Email sent to {user['email']}!")
             else:
-                print(f"SendGrid returned {response.status_code} for {user['email']}: {response.text}")
+                print(f"Brevo returned {response.status_code} for {user['email']}: {response.text}")
     except Exception as e:
-        print(f" Error sending to {user['email']}: {e}")
-    article_ids = [a["id"] for a in articles]
-    await save_digest(user_id=user["user_id"], article_ids=article_ids, email_status=status)
-    return status
-async def send_digests(personalized: dict) -> list[str]:
-    """
-    personalized: { user_id: {"user": {...}, "articles": [...]} } from
-    the personalizer agent. Sends one email per user and returns the list
-    of email addresses that were successfully sent.
-    """
-    emails_sent = []
-    for user_id, digest in personalized.items():
-        status = await send_digest(digest["user"], digest["articles"])
-        if status == "sent":
-            emails_sent.append(digest["user"]["email"])
-    print(f"Emailer done → {len(emails_sent)} emails sent!")
-    return emails_sent
+        print(f"Error sending to {user['email']}: {e}")
