@@ -102,7 +102,7 @@ def _render_email(user: dict, articles: list[dict]) -> tuple[str, str]:
     return html, subject
 async def send_digest(user: dict, articles: list[dict]) -> str:
     """
-    Sends one user's digest email via SendGrid, then records the send
+    Sends one user's digest email via Brevo, then records the send
     (or failure) in the digests table. Returns 'sent' or 'failed'.
     """
     html, subject = _render_email(user, articles)
@@ -130,3 +130,21 @@ async def send_digest(user: dict, articles: list[dict]) -> str:
                 print(f"Brevo returned {response.status_code} for {user['email']}: {response.text}")
     except Exception as e:
         print(f"Error sending to {user['email']}: {e}")
+    article_ids = [a["id"] for a in articles]
+    await save_digest(user_id=user["user_id"], article_ids=article_ids, email_status=status)
+    return status
+
+
+async def send_digests(personalized: dict) -> list[str]:
+    """
+    personalized: { user_id: {"user": {...}, "articles": [...]} } from
+    the personalizer agent. Sends one email per user and returns the list
+    of email addresses that were successfully sent.
+    """
+    emails_sent = []
+    for user_id, digest in personalized.items():
+        status = await send_digest(digest["user"], digest["articles"])
+        if status == "sent":
+            emails_sent.append(digest["user"]["email"])
+    print(f"Emailer done → {len(emails_sent)} emails sent!")
+    return emails_sent
